@@ -1,5 +1,7 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { CATEGORIES, CAT_COLORS, BRACKETS } from '../constants.js'
+
+const PAGE_SIZE = 24
 
 export default function Step3Cards({
   slots,
@@ -13,10 +15,25 @@ export default function Step3Cards({
   onBack,
   onNext,
 }) {
+  const [sortBy, setSortBy] = useState('synergy')
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+
+  // Reset pagination when category or sort changes
+  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [activeCategory, sortBy])
+
   const visibleCats = CATEGORIES.filter(c => filters.categories.includes(c.key))
   const cat = activeCategory
-  const cards = recommendations[cat] || []
-  const selectedInCat = cards.filter(c => selected[c.id])
+  const allCards = recommendations[cat] || []
+
+  const cards = [...allCards].sort((a, b) =>
+    sortBy === 'inclusion'
+      ? (b.inclusionRate ?? -1) - (a.inclusionRate ?? -1)
+      : b.synergy - a.synergy
+  )
+
+  const visibleCards = cards.slice(0, visibleCount)
+  const hasMore = visibleCount < cards.length
+  const selectedInCat = allCards.filter(c => selected[c.id])
   const catInfo = CATEGORIES.find(c => c.key === cat)
   const totalSelected = Object.keys(selected).length
 
@@ -108,14 +125,38 @@ export default function Step3Cards({
 
           {!loading && cards.length > 0 && (
             <>
-              <div style={{ marginBottom: '0.75rem', fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                {filters.bracket
-                  ? `EDHREC · ${BRACKETS.find(b => b.value === filters.bracket)?.label} decklists`
-                  : 'EDHREC · all decklists'
-                } · {selectedInCat.length} of {slots[cat]} selected
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  {filters.bracket
+                    ? `EDHREC · ${BRACKETS.find(b => b.value === filters.bracket)?.label} decklists`
+                    : 'EDHREC · all decklists'
+                  } · {selectedInCat.length} of {slots[cat]} selected
+                </div>
+                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                  {['synergy', 'inclusion'].map(key => (
+                    <button
+                      key={key}
+                      onClick={() => setSortBy(key)}
+                      style={{
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: 12,
+                        border: `0.5px solid ${sortBy === key ? 'var(--gold)' : 'var(--border)'}`,
+                        background: sortBy === key ? 'var(--gold)' : 'transparent',
+                        color: sortBy === key ? 'var(--ink)' : 'var(--text-muted)',
+                        fontFamily: "'Cinzel', serif",
+                        fontSize: '0.6rem',
+                        fontWeight: 600,
+                        letterSpacing: '0.05em',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {key === 'synergy' ? 'Synergy' : '% of Decks'}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div style={cardsGrid}>
-                {cards.map(card => {
+                {visibleCards.map(card => {
                   const isSelected = !!selected[card.id]
                   const synergyPct = Math.round((card.synergy || 0) * 100)
                   return (
@@ -160,6 +201,17 @@ export default function Step3Cards({
                   )
                 })}
               </div>
+              {hasMore && (
+                <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+                  <button
+                    className="btn"
+                    onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+                    style={{ minWidth: 160 }}
+                  >
+                    Load more ({cards.length - visibleCount} remaining)
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>

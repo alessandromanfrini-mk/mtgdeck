@@ -30,10 +30,26 @@ function bracketSubpath(bracket) {
 }
 
 async function fetchEDHRECPage(url) {
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
-  const res = await fetch(proxy, { signal: AbortSignal.timeout(10000) })
-  const outer = await res.json()
-  return JSON.parse(outer.contents)
+  const encoded = encodeURIComponent(url)
+
+  // corsproxy.io returns the raw response directly
+  try {
+    const res = await fetch(`https://corsproxy.io/?url=${encoded}`, { signal: AbortSignal.timeout(12000) })
+    if (res.ok) return res.json()
+  } catch (e) {
+    console.warn('[EDHREC] corsproxy.io failed:', e?.message)
+  }
+
+  // allorigins.win wraps the response in { contents: "<json string>" }
+  try {
+    const res = await fetch(`https://api.allorigins.win/get?url=${encoded}`, { signal: AbortSignal.timeout(12000) })
+    const outer = await res.json()
+    return JSON.parse(outer.contents)
+  } catch (e) {
+    console.warn('[EDHREC] allorigins.win failed:', e?.message)
+  }
+
+  throw new Error('All CORS proxies failed for ' + url)
 }
 
 /**
@@ -54,8 +70,16 @@ export async function fetchCommanderCards(commander, filters) {
     try {
       const data = await fetchEDHRECPage(url)
       const lists = data?.container?.json_dict?.cardlists || []
-      if (lists.length > 0) { cardlists = lists; break }
-    } catch {}
+      if (lists.length > 0) {
+        cardlists = lists
+        console.info('[EDHREC] loaded', lists.length, 'cardlists from', url)
+        break
+      } else {
+        console.warn('[EDHREC] no cardlists at', url, '— trying next')
+      }
+    } catch (e) {
+      console.warn('[EDHREC] failed to fetch', url, e?.message)
+    }
   }
 
   if (!cardlists) return []
@@ -63,6 +87,7 @@ export async function fetchCommanderCards(commander, filters) {
   // Merge cards from all relevant lists, deduplicated by name
   const byName = new Map()
 
+  let _logged = false
   for (const list of cardlists) {
     const tag = (list.tag || list.header || '').toLowerCase().replace(/\s+/g, '')
     if (!RELEVANT_TAGS.has(tag)) continue
@@ -71,6 +96,10 @@ export async function fetchCommanderCards(commander, filters) {
 
     for (const cv of list.cardviews || []) {
       if (!cv.name) continue
+      if (!_logged) {
+        console.log('[EDHREC] raw cardview sample (tag=' + tag + '):', JSON.stringify(cv, null, 2))
+        _logged = true
+      }
       const key = cv.name.toLowerCase()
       if (byName.has(key)) {
         // Keep highest synergy; promote to gamechanger if seen in that list
@@ -80,6 +109,7 @@ export async function fetchCommanderCards(commander, filters) {
       } else {
         byName.set(key, {
           name: cv.name,
+          scryfallId: cv.id || null,
           synergy: cv.synergy || 0,
           numDecks: cv.num_decks || 0,
           potentialDecks: cv.potential_decks || 0,

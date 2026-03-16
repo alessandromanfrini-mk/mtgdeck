@@ -88,11 +88,11 @@ export function categorizeCard(card) {
 /**
  * Fetch up to 75 cards by name in one POST to /cards/collection.
  */
-async function fetchCardCollection(names) {
+async function fetchCardCollection(identifiers) {
   const res = await fetch('https://api.scryfall.com/cards/collection', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifiers: names.map(name => ({ name })) }),
+    body: JSON.stringify({ identifiers }),
     signal: AbortSignal.timeout(10000),
   })
   const data = await res.json()
@@ -114,27 +114,34 @@ export async function enrichAndCategorize(pool, commander, filters, enabledCateg
 }
 
 async function enrichFromPool(pool, filters, enabledCategories) {
-  // Take top 150 by synergy (enough to fill all categories after filtering)
-  const top = pool.slice(0, 150)
-  const names = top.map(c => c.name)
+  const top = pool
+
+  // Use Scryfall ID when EDHREC provides it (avoids name-matching issues)
+  const identifiers = top.map(c =>
+    c.scryfallId ? { id: c.scryfallId } : { name: c.name }
+  )
 
   // Bulk-fetch Scryfall data in batches of 75
   const scryfallCards = []
-  for (let i = 0; i < names.length; i += 75) {
-    const batch = await fetchCardCollection(names.slice(i, i + 75))
+  for (let i = 0; i < identifiers.length; i += 75) {
+    const batch = await fetchCardCollection(identifiers.slice(i, i + 75))
     scryfallCards.push(...batch)
-    if (i + 75 < names.length) await sleep(DELAY_MS)
+    if (i + 75 < identifiers.length) await sleep(DELAY_MS)
   }
 
-  // Build lookup map
+  // Build lookup map by both id and name for flexible matching
+  const sfById = {}
   const sfByName = {}
-  scryfallCards.forEach(c => { sfByName[c.name.toLowerCase()] = c })
+  scryfallCards.forEach(c => {
+    sfById[c.id] = c
+    sfByName[c.name.toLowerCase()] = c
+  })
 
   const categorized = {}
   enabledCategories.forEach(k => { categorized[k] = [] })
 
   for (const entry of top) {
-    const sf = sfByName[entry.name.toLowerCase()]
+    const sf = (entry.scryfallId && sfById[entry.scryfallId]) || sfByName[entry.name.toLowerCase()]
     if (!sf?.id) continue
 
     // Budget filter
@@ -165,10 +172,10 @@ async function enrichFromPool(pool, filters, enabledCategories) {
     })
   }
 
-  // Sort each category by synergy desc, cap at 50
+  // Sort each category by synergy desc, cap at 100
   for (const key of Object.keys(categorized)) {
     categorized[key].sort((a, b) => b.synergy - a.synergy)
-    categorized[key] = categorized[key].slice(0, 50)
+    categorized[key] = categorized[key].slice(0, 100)
   }
 
   return categorized

@@ -101,8 +101,8 @@ export default function App() {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '1.5rem 1rem 4rem' }}>
-      <h1>⚔ Commander Forge</h1>
-      <p className="subtitle">Build the perfect 99 for your commander</p>
+      <h1>⚔ Commander Trøll</h1>
+      <p className="subtitle">mosquitroll test</p>
       <div className="divider">✦ ✦ ✦</div>
 
       <StepNav step={step} onGoTo={setStep} />
