@@ -1,158 +1,104 @@
-import React, { useState, useCallback } from 'react'
-import StepNav from './components/StepNav.jsx'
-import Step1Commander from './components/Step1Commander.jsx'
-import Step2Filters from './components/Step2Filters.jsx'
-import Step3Cards from './components/Step3Cards.jsx'
-import Step4Export from './components/Step4Export.jsx'
-import { CATEGORIES } from './constants.js'
-import { fetchCommanderCards } from './lib/edhrec.js'
-import { enrichAndCategorize, fetchPrints } from './lib/scryfall.js'
+import React, { useState, useMemo } from 'react'
+import UrlInput from './components/UrlInput.jsx'
+import FilterBar from './components/FilterBar.jsx'
+import CardGrid from './components/CardGrid.jsx'
+import ExportPanel from './components/ExportPanel.jsx'
+import { fetchDeck } from './lib/fetchers.js'
+import { mergeDecks } from './lib/merge.js'
+import { enrichCards } from './lib/scryfall.js'
 
-const defaultSlots = Object.fromEntries(CATEGORIES.map(c => [c.key, c.default]))
-const defaultFilters = {
-  bracket: '',
-  setFilter: '',
-  budget: '',
-  categories: CATEGORIES.map(c => c.key),
-}
+const DEFAULT_FILTERS = { search: '', colors: [], types: [], sort: 'name' }
 
 export default function App() {
-  const [step, setStep] = useState(1)
-  const [commander, setCommander] = useState(null)
-  const [slots, setSlots] = useState(defaultSlots)
-  const [filters, setFilters] = useState(defaultFilters)
-  const [recommendations, setRecommendations] = useState({})
-  const [selected, setSelected] = useState({})
-  const [prints, setPrints] = useState({})
-  const [allPrints, setAllPrints] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [activeCategory, setActiveCategory] = useState('lands')
+  const [urls, setUrls]               = useState([''])
+  const [statuses, setStatuses]       = useState({})
+  const [loading, setLoading]         = useState(false)
+  const [loadingStage, setLoadingStage] = useState('')
+  const [cards, setCards]             = useState([])
+  const [filters, setFilters]         = useState(DEFAULT_FILTERS)
 
-  // ── Step 1 ──────────────────────────────────────────────
-  function handleConfirmCommander(card) {
-    setCommander(card)
-    setStep(2)
-  }
-
-  // ── Step 2 ──────────────────────────────────────────────
-  async function handleFetchRecs() {
-    setStep(3)
-    setRecommendations({})
+  async function handleLoad(activeUrls) {
     setLoading(true)
+    setCards([])
+    setFilters(DEFAULT_FILTERS)
 
-    const firstCat = CATEGORIES.find(c => filters.categories.includes(c.key))
-    if (firstCat) setActiveCategory(firstCat.key)
+    // Mark all as loading
+    setStatuses(Object.fromEntries(activeUrls.map(u => [u, { state: 'loading' }])))
+    setLoadingStage('Fetching decks…')
 
-    try {
-      // 1. Fetch bracket-specific EDHREC page — one request for all cards
-      const pool = await fetchCommanderCards(commander, filters)
-      // 2. Bulk-enrich with Scryfall, categorize by oracle text / type
-      const recs = await enrichAndCategorize(
-        pool,
-        commander,
-        filters,
-        filters.categories,
-      )
-      setRecommendations(recs)
-    } catch (e) {
-      console.error('Failed to load recommendations', e)
+    // Fetch all in parallel
+    const results = await Promise.allSettled(activeUrls.map(u => fetchDeck(u)))
+
+    const loadedDecks = []
+    const newStatuses = {}
+
+    results.forEach((result, i) => {
+      const url = activeUrls[i]
+      if (result.status === 'fulfilled') {
+        const { deckName, cards: deckCards } = result.value
+        loadedDecks.push({ url, deckName, cards: deckCards })
+        newStatuses[url] = { state: 'done', deckName }
+      } else {
+        newStatuses[url] = { state: 'error', error: result.reason?.message ?? 'Failed' }
+      }
+    })
+
+    setStatuses(newStatuses)
+
+    if (loadedDecks.length > 0) {
+      setLoadingStage('Enriching with Scryfall…')
+      const merged   = mergeDecks(loadedDecks)
+      const enriched = await enrichCards(merged)
+      setCards(enriched)
     }
 
+    setLoadingStage('')
     setLoading(false)
-    const first = CATEGORIES.find(c => filters.categories.includes(c.key))
-    if (first) setActiveCategory(first.key)
   }
 
-  // ── Step 3 ──────────────────────────────────────────────
-  function handleToggleCard(card) {
-    setSelected(prev => {
-      if (prev[card.id]) {
-        const next = { ...prev }
-        delete next[card.id]
-        return next
-      }
-      // Auto-fetch prints when selecting
-      if (!allPrints[card.id]) {
-        fetchPrints(card.name).then(data => {
-          setAllPrints(p => ({ ...p, [card.id]: data }))
-          setPrints(p => p[card.id] ? p : { ...p, [card.id]: data[0] })
-        })
-      }
-      return { ...prev, [card.id]: { ...card, _cat: activeCategory } }
-    })
-  }
-
-  // ── Step 4 ──────────────────────────────────────────────
-  function handlePrintChosen(cardId, print) {
-    setPrints(prev => ({ ...prev, [cardId]: print }))
-  }
-
-  function handleAllPrintsLoaded(cardId, data) {
-    setAllPrints(prev => ({ ...prev, [cardId]: data }))
-  }
-
-  function handleRemoveCard(cardId) {
-    setSelected(prev => {
-      const next = { ...prev }
-      delete next[cardId]
-      return next
-    })
-  }
+  const totalQuantity = useMemo(
+    () => cards.reduce((sum, c) => sum + c.quantity, 0),
+    [cards],
+  )
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '1.5rem 1rem 4rem' }}>
-      <h1>⚔ Commander Trøll</h1>
-      <p className="subtitle">mosquitroll test</p>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem 1rem 5rem' }}>
+      <h1>Commander Forge</h1>
+      <p className="subtitle">MTG Collection Viewer</p>
       <div className="divider">✦ ✦ ✦</div>
 
-      <StepNav step={step} onGoTo={setStep} />
+      <UrlInput
+        urls={urls}
+        onUrlsChange={setUrls}
+        onLoad={handleLoad}
+        statuses={statuses}
+        loading={loading}
+      />
 
-      {step === 1 && (
-        <Step1Commander
-          commander={commander}
-          onConfirm={handleConfirmCommander}
-        />
+      {loading && loadingStage && (
+        <div className="loading-state">
+          <div className="spinner" />
+          {loadingStage}
+        </div>
       )}
 
-      {step === 2 && (
-        <Step2Filters
-          commander={commander}
-          slots={slots}
-          filters={filters}
-          onSlotsChange={setSlots}
-          onFiltersChange={setFilters}
-          onBack={() => setStep(1)}
-          onNext={handleFetchRecs}
-        />
+      {!loading && cards.length > 0 && (
+        <>
+          <FilterBar
+            filters={filters}
+            onFiltersChange={setFilters}
+            total={totalQuantity}
+            unique={cards.length}
+          />
+          <CardGrid cards={cards} filters={filters} />
+          <ExportPanel cards={cards} />
+        </>
       )}
 
-      {step === 3 && (
-        <Step3Cards
-          slots={slots}
-          filters={filters}
-          recommendations={recommendations}
-          selected={selected}
-          loading={loading}
-          activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
-          onToggleCard={handleToggleCard}
-          onBack={() => setStep(2)}
-          onNext={() => setStep(4)}
-        />
-      )}
-
-      {step === 4 && (
-        <Step4Export
-          commander={commander}
-          selected={selected}
-          slots={slots}
-          prints={prints}
-          allPrints={allPrints}
-          onPrintChosen={handlePrintChosen}
-          onAllPrintsLoaded={handleAllPrintsLoaded}
-          onRemoveCard={handleRemoveCard}
-          onBack={() => setStep(3)}
-        />
+      {!loading && cards.length === 0 && Object.keys(statuses).length === 0 && (
+        <div className="loading-state">
+          Paste one or more deck URLs above to view your collection.
+        </div>
       )}
     </div>
   )

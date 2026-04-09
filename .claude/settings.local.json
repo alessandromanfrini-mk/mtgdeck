@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/aless/**)",
+      "Bash(npm create:*)",
+      "Bash(cmd.exe /c \"where node\" 2>&1; cmd.exe /c \"where npm\" 2>&1)",
+      "Bash(cmd.exe /c \"node --version & npm --version & echo NODE_PATH=%PATH%\" 2>&1 | head -20)",
+      "Bash(powershell.exe -Command \"node --version; npm --version\" 2>&1)",
+      "Bash(powershell.exe -Command \"Get-ChildItem 'C:\\\\Users\\\\aless\\\\AppData\\\\Roaming\\\\' -Directory | Select-Object Name\" 2>&1)",
+      "WebFetch(domain:json.edhrec.com)",
+      "Bash(gh repo:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh api:*)",
+      "Bash(git config:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)"
+    ]
+  }
+}

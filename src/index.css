@@ -227,3 +227,198 @@ input:focus, select:focus { border-color: var(--gold); }
 .step-pill.done:hover {
   background: rgba(201,168,76,0.25);
 }
+
+/* ── URL Input ──────────────────────────────────────────────────────────────── */
+
+.url-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.site-badge {
+  flex-shrink: 0;
+  padding: 0.2rem 0.55rem;
+  border-radius: 5px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border: 0.5px solid;
+  white-space: nowrap;
+}
+
+.status-badge {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Filter Bar ─────────────────────────────────────────────────────────────── */
+
+.filter-bar { margin-bottom: 1.25rem; }
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.filter-group {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.color-toggle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  background: transparent;
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.color-toggle:hover { border-color: var(--gold); color: var(--text-main); }
+
+.color-toggle-W.active { background: var(--mana-W); color: #555;    border-color: var(--mana-W); }
+.color-toggle-U.active { background: var(--mana-U); color: #1a3a6e; border-color: var(--mana-U); }
+.color-toggle-B.active { background: var(--mana-B); color: #fff;    border-color: var(--mana-B); }
+.color-toggle-R.active { background: var(--mana-R); color: #fff;    border-color: var(--mana-R); }
+.color-toggle-G.active { background: var(--mana-G); color: #1a3a1a; border-color: var(--mana-G); }
+.color-toggle-C.active { background: #ccc;           color: #555;    border-color: #bbb; }
+
+.type-toggle {
+  padding: 0.25rem 0.65rem;
+  border-radius: 20px;
+  border: 0.5px solid var(--border-strong);
+  background: transparent;
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.type-toggle:hover { border-color: var(--gold); color: var(--text-main); }
+
+.type-toggle.active {
+  background: rgba(201,168,76,0.15);
+  border-color: var(--gold);
+  color: var(--text-gold);
+}
+
+/* ── Card Grid ──────────────────────────────────────────────────────────────── */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.card-tile {
+  background: var(--surface);
+  border: 0.5px solid var(--card-border);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.card-tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  border-color: var(--border-strong);
+}
+
+.card-tile-img-wrap {
+  position: relative;
+  aspect-ratio: 5 / 7;
+  overflow: hidden;
+  background: var(--surface2);
+}
+
+.card-tile-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.qty-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(0,0,0,0.72);
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.rarity-dot {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+.card-tile-info {
+  padding: 0.5rem 0.6rem 0.55rem;
+}
+
+.card-tile-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.15rem;
+}
+
+.card-tile-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.card-tile-cmc {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  color: var(--gold-dim);
+  font-size: 0.7rem;
+}
+
+.card-tile-sources {
+  font-size: 0.67rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 0.2rem;
+}
+
+@media (max-width: 600px) {
+  .card-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.6rem; }
+  .filter-row { gap: 0.4rem; }
+}
