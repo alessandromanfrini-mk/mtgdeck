@@ -32,6 +32,7 @@ export async function dbSaveCollection(cards) {
   if (!supabase) return
   const rows = cards.map(c => ({
     card_id:   c.id,
+    name:      c.name,
     finish:    c.finish ?? 'nonFoil',
     quantity:  c.quantity,
     card_data: c,
