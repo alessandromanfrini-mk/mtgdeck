@@ -53,19 +53,40 @@ export function clearCollection() {
   localStorage.removeItem(KEYS.collection)
 }
 
+/** Remove a single card (by id + finish) from the collection array. */
+export function removeFromCollection(cards, cardId, finish) {
+  return cards.filter(
+    c => !(c.id === cardId && (c.finish ?? 'nonFoil') === (finish ?? 'nonFoil'))
+  )
+}
+
+/**
+ * Build a stable merge key for a card.
+ * Primary: Scryfall UUID + finish (guaranteed unique per printing + treatment).
+ * Fallback: name + set + cn + finish (handles cards without a UUID).
+ */
+function collectionKey(c) {
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const finish = c.finish ?? 'nonFoil'
+  if (c.id && UUID.test(c.id)) return `${c.id}:${finish}`
+  // Fallback: treat different set+cn as different versions even without a UUID
+  return `${c.name?.toLowerCase()}:${c.set ?? ''}:${c.cn ?? ''}:${finish}`
+}
+
 /**
  * Merge newly loaded (enriched) cards into the existing collection.
- * Cards with the same Scryfall ID + finish are combined; quantities are summed.
+ * Cards with the same key (UUID+finish, or name+set+cn+finish) are combined;
+ * quantities are summed.
  */
 export function mergeIntoCollection(existing, incoming) {
   const map = new Map()
 
   for (const c of existing) {
-    map.set(c.id + ':' + (c.finish ?? 'nonFoil'), { ...c })
+    map.set(collectionKey(c), { ...c })
   }
 
   for (const c of incoming) {
-    const key = c.id + ':' + (c.finish ?? 'nonFoil')
+    const key = collectionKey(c)
     if (map.has(key)) {
       const ex = map.get(key)
       ex.quantity += c.quantity

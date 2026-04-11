@@ -1,5 +1,27 @@
 const DELAY_MS = 100
 
+/** Autocomplete card names via Scryfall. Returns up to 20 name suggestions. */
+export async function autocompleteCards(query) {
+  if (!query || query.length < 2) return []
+  const res = await fetch(
+    `https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(query)}`,
+    { signal: AbortSignal.timeout(5000) }
+  )
+  const data = await res.json()
+  return data.data ?? []
+}
+
+/** Fetch all printings of an exact card name. Returns enriched Scryfall card objects. */
+export async function searchCardPrintings(name) {
+  const res = await fetch(
+    `https://api.scryfall.com/cards/search?q=${encodeURIComponent(`!"${name}"`)}&unique=prints&order=released`,
+    { signal: AbortSignal.timeout(8000) }
+  )
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.data ?? []
+}
+
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 export function getCardImage(card, size = 'normal') {
@@ -90,6 +112,7 @@ export async function enrichCards(mergedCards) {
         name:          entry.name,
         quantity:      entry.quantity,
         sources:       entry.sources,
+        _srcKey:       entry._srcKey,
         imageUrl:      imageFromScryfallId(entry.scryfallId),
         colors:        entry.colors        ?? [],
         color_identity: entry.colorIdentity ?? [],
@@ -114,6 +137,7 @@ export async function enrichCards(mergedCards) {
       name:          entry.name,
       quantity:      entry.quantity,
       sources:       entry.sources,
+      _srcKey:       entry._srcKey,
       imageUrl:      sf ? getCardImage(sf) : imageFromScryfallId(entry.scryfallId),
       colors:        sf?.colors          ?? entry.colors        ?? [],
       color_identity: sf?.color_identity ?? entry.colorIdentity ?? [],

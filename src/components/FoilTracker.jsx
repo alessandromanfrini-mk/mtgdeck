@@ -1,5 +1,34 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { fetchPrices } from '../lib/scryfall.js'
+
+const PLACEHOLDER = 'data:image/svg+xml,%3Csvg xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" viewBox%3D"0 0 146 204"%3E%3Crect width%3D"146" height%3D"204" fill%3D"%23D4A84318" rx%3D"8"%2F%3E%3C%2Fsvg%3E'
+
+function CardPreview({ card, x, y }) {
+  const img = card.imageUrl || PLACEHOLDER
+  // Keep preview inside viewport
+  const left = x + 160 > window.innerWidth ? x - 155 : x + 16
+  const top  = Math.min(y - 20, window.innerHeight - 300)
+
+  return createPortal(
+    <div style={{
+      position: 'fixed', left, top, zIndex: 9999,
+      pointerEvents: 'none',
+      animation: 'fadeInUp 0.15s ease',
+    }}>
+      <img
+        src={img}
+        alt={card.name}
+        style={{
+          width: 140,
+          borderRadius: 10,
+          boxShadow: '0 12px 40px rgba(0,0,0,0.8), 0 0 0 1px rgba(212,168,67,0.3)',
+        }}
+      />
+    </div>,
+    document.body
+  )
+}
 
 const RARITY_ORDER = { mythic: 0, rare: 1, uncommon: 2, common: 3, '': 4 }
 const RARITY_COLORS = { mythic: '#e67e22', rare: '#f1c40f', uncommon: '#bdc3c7', common: 'var(--text-muted)' }
@@ -8,6 +37,17 @@ export default function FoilTracker({ cards }) {
   const [activeDeck, setActiveDeck]     = useState(null)
   const [prices, setPrices]             = useState(new Map())
   const [pricesLoaded, setPricesLoaded] = useState(false)
+  const [hoveredCard, setHoveredCard]   = useState(null)
+  const [mousePos, setMousePos]         = useState({ x: 0, y: 0 })
+
+  const handleMouseEnter = useCallback((card, e) => {
+    setHoveredCard(card)
+    setMousePos({ x: e.clientX, y: e.clientY })
+  }, [])
+  const handleMouseMove  = useCallback((e) => {
+    setMousePos({ x: e.clientX, y: e.clientY })
+  }, [])
+  const handleMouseLeave = useCallback(() => setHoveredCard(null), [])
   const [loadingPrices, setLoadingPrices] = useState(false)
   const [sort, setSort]                 = useState('rarity')
 
@@ -149,6 +189,7 @@ export default function FoilTracker({ cards }) {
           </div>
 
           {/* Non-foil card list */}
+          {hoveredCard && <CardPreview card={hoveredCard} x={mousePos.x} y={mousePos.y} />}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: 420, overflowY: 'auto' }}>
             {sortedPlain.map(c => {
               const foilPrice = pricesLoaded
@@ -156,7 +197,10 @@ export default function FoilTracker({ cards }) {
                 : null
               return (
                 <div
-                  key={c.id}
+                  key={c.id + ':' + c.finish}
+                  onMouseEnter={e => handleMouseEnter(c, e)}
+                  onMouseMove={handleMouseMove}
+                  onMouseLeave={handleMouseLeave}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -165,9 +209,15 @@ export default function FoilTracker({ cards }) {
                     background: 'var(--surface2)',
                     borderRadius: 6,
                     fontSize: '0.82rem',
+                    cursor: 'default',
                   }}
                 >
                   <span style={{ flex: 1 }}>{c.name}</span>
+                  {(c.set || c.cn) && (
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      {c.set?.toUpperCase()}{c.cn ? ` #${c.cn}` : ''}
+                    </span>
+                  )}
                   <span style={{ color: RARITY_COLORS[c.rarity] ?? 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'capitalize', minWidth: 52 }}>
                     {c.rarity}
                   </span>

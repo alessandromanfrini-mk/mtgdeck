@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import CardTile from './CardTile.jsx'
 
 function getMainType(typeLine) {
@@ -51,11 +51,18 @@ function filterCards(cards, filters) {
   return result
 }
 
-export default function CardGrid({ cards, filters }) {
+const PAGE_SIZE = 48
+
+export default function CardGrid({ cards, filters, onRemove }) {
+  const [page, setPage] = useState(1)
+
   const visible = useMemo(
     () => sortCards(filterCards(cards, filters), filters.sort),
     [cards, filters],
   )
+
+  // Reset to page 1 whenever the filtered+sorted list changes
+  useEffect(() => { setPage(1) }, [visible])
 
   if (cards.length === 0) {
     return (
@@ -73,11 +80,23 @@ export default function CardGrid({ cards, filters }) {
     )
   }
 
+  const shown     = visible.slice(0, page * PAGE_SIZE)
+  const remaining = visible.length - shown.length
+
   return (
-    <div className="card-grid">
-      {visible.map(card => (
-        <CardTile key={card.id} card={card} />
-      ))}
-    </div>
+    <>
+      <div className="card-grid">
+        {shown.map(card => (
+          <CardTile key={card._srcKey ?? (card.id + ':' + (card.finish ?? 'nonFoil') + ':' + (card.sources?.[0] ?? ''))} card={card} onRemove={onRemove} />
+        ))}
+      </div>
+      {remaining > 0 && (
+        <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+          <button className="btn btn-sm" onClick={() => setPage(p => p + 1)}>
+            Load more ({remaining} remaining)
+          </button>
+        </div>
+      )}
+    </>
   )
 }

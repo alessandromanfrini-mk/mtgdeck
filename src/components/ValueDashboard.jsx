@@ -1,6 +1,105 @@
 import React, { useState, useMemo } from 'react'
 import { fetchPrices } from '../lib/scryfall.js'
 
+const RANK_STYLES = [
+  { border: '2px solid #FFD700', glow: '0 0 18px rgba(255,215,0,0.55), 0 8px 32px rgba(0,0,0,0.7)', label: '#FFD700' }, // gold
+  { border: '2px solid #C0C0C0', glow: '0 0 14px rgba(192,192,192,0.45), 0 8px 28px rgba(0,0,0,0.6)', label: '#C0C0C0' }, // silver
+  { border: '2px solid #CD7F32', glow: '0 0 14px rgba(205,127,50,0.45), 0 8px 28px rgba(0,0,0,0.6)', label: '#CD7F32' }, // bronze
+]
+const DEFAULT_RANK = { border: '1px solid var(--border)', glow: '0 4px 16px rgba(0,0,0,0.5)', label: 'var(--text-muted)' }
+
+const PLACEHOLDER = 'data:image/svg+xml,%3Csvg xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" viewBox%3D"0 0 146 204"%3E%3Crect width%3D"146" height%3D"204" fill%3D"%23D4A84318" rx%3D"8"%2F%3E%3C%2Fsvg%3E'
+
+function TopCard({ card, rank, price }) {
+  const [hovered, setHovered] = useState(false)
+  const [imgErr, setImgErr]   = useState(false)
+  const rs     = RANK_STYLES[rank - 1] ?? DEFAULT_RANK
+  const isFoil = card.finish !== 'nonFoil'
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative',
+        width: '100%',
+        borderRadius: 10,
+        border: rs.border,
+        boxShadow: hovered
+          ? rs.glow.replace('0.55', '0.9').replace('0.45', '0.75')
+          : rs.glow,
+        transform: hovered ? 'translateY(-6px) scale(1.04)' : 'translateY(0) scale(1)',
+        transition: 'transform 0.22s ease, box-shadow 0.22s ease',
+        overflow: 'hidden',
+        cursor: 'default',
+      }}
+    >
+      {/* Card image */}
+      <img
+        src={imgErr || !card.imageUrl ? PLACEHOLDER : card.imageUrl}
+        alt={card.name}
+        onError={() => setImgErr(true)}
+        style={{ width: '100%', display: 'block' }}
+      />
+
+      {/* Foil shimmer */}
+      {isFoil && (
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'linear-gradient(135deg, transparent 30%, rgba(255,200,100,0.15) 50%, transparent 70%)',
+          backgroundSize: '200% 200%',
+          animation: 'foil-move 3s linear infinite',
+          mixBlendMode: 'color-dodge',
+        }} />
+      )}
+
+      {/* Rank badge */}
+      <div style={{
+        position: 'absolute', top: 6, left: 6,
+        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
+        borderRadius: 6, padding: '2px 7px',
+        fontSize: '0.7rem', fontWeight: 700, color: rs.label,
+        fontFamily: "'Cinzel', serif",
+      }}>
+        #{rank}
+      </div>
+
+      {/* Foil indicator */}
+      {isFoil && (
+        <div style={{
+          position: 'absolute', top: 6, right: 6,
+          fontSize: '0.68rem', color: 'var(--gold-light)',
+          textShadow: '0 0 6px rgba(240,200,96,0.9)',
+        }}>✦</div>
+      )}
+
+      {/* Price footer */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        background: 'linear-gradient(transparent, rgba(0,0,0,0.88))',
+        padding: '1.5rem 0.5rem 0.4rem',
+        textAlign: 'center',
+      }}>
+        <div style={{
+          fontSize: '0.78rem', fontWeight: 700,
+          color: rank <= 3 ? rs.label : 'var(--gold)',
+          fontVariantNumeric: 'tabular-nums',
+          textShadow: rank === 1 ? '0 0 10px rgba(255,215,0,0.7)' : 'none',
+        }}>
+          {price}
+        </div>
+        <div style={{
+          fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          marginTop: 1, paddingLeft: '0.25rem', paddingRight: '0.25rem',
+        }}>
+          {card.name}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const MARKETPLACES = [
   { id: 'tcgplayer',  label: 'TCGPlayer',  currency: '$',   note: 'USD' },
   { id: 'cardmarket', label: 'Cardmarket', currency: '€',   note: 'EUR' },
@@ -161,17 +260,14 @@ export default function ValueDashboard({ cards }) {
           {/* Top 10 cards */}
           {topCards.length > 0 && (
             <div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Most Valuable Cards</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Most Valuable Cards</div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(5, 1fr)',
+                gap: '0.75rem',
+              }}>
                 {topCards.map((c, i) => (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.3rem 0.6rem', background: 'var(--surface2)', borderRadius: 6, fontSize: '0.82rem' }}>
-                    <span style={{ color: 'var(--text-muted)', minWidth: 18, fontSize: '0.72rem' }}>#{i + 1}</span>
-                    <span style={{ flex: 1 }}>{c.name}</span>
-                    {c.finish !== 'nonFoil' && <span style={{ fontSize: '0.72rem', color: 'var(--gold)' }}>✦</span>}
-                    <span style={{ color: 'var(--gold)', fontVariantNumeric: 'tabular-nums', minWidth: 60, textAlign: 'right' }}>
-                      {fmt(c._price, marketplace)}
-                    </span>
-                  </div>
+                  <TopCard key={c.id + ':' + c.finish} card={c} rank={i + 1} price={fmt(c._price, marketplace)} />
                 ))}
               </div>
             </div>

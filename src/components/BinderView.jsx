@@ -61,7 +61,7 @@ export default function BinderView({ cards }) {
             {/* Card rows */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
               {gc.map(c => (
-                <div key={c.id} style={{
+                <div key={c.id + ':' + (c.finish ?? 'nonFoil')} style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.6rem',

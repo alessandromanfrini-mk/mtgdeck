@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, memo } from 'react'
 import ColorPips from './ColorPips.jsx'
 
 const RARITY_COLOR = {
@@ -17,7 +17,7 @@ function getMainType(typeLine) {
 
 const PLACEHOLDER = 'data:image/svg+xml,%3Csvg xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" viewBox%3D"0 0 146 204"%3E%3Crect width%3D"146" height%3D"204" fill%3D"%23D4A84318" rx%3D"8"%2F%3E%3C%2Fsvg%3E'
 
-export default function CardTile({ card }) {
+const CardTile = memo(function CardTile({ card, onRemove }) {
   const [imgErr, setImgErr] = useState(false)
   const tileRef = useRef(null)
   const isFoil = card.finish === 'foil' || card.finish === 'etched'
@@ -64,7 +64,27 @@ export default function CardTile({ card }) {
             title={card.rarity}
           />
         )}
+
+        {/* Set + collector number badge — bottom-left of image */}
+        {card.set && (
+          <span
+            className="set-badge"
+            title={`${card.set_name ?? card.set} #${card.cn}`}
+          >
+            {card.set.toUpperCase()}{card.cn ? ` · ${card.cn}` : ''}
+          </span>
+        )}
       </div>
+
+      {onRemove && (
+        <button
+          className="card-tile-remove"
+          title="Remove from collection"
+          onClick={e => { e.stopPropagation(); onRemove(card.id, card.finish) }}
+        >
+          ✕
+        </button>
+      )}
 
       <div className="card-tile-info">
         <div className="card-tile-name" title={card.name}>{card.name}</div>
@@ -77,12 +97,14 @@ export default function CardTile({ card }) {
           {mainType && <span>{mainType}</span>}
           {card.cmc > 0 && <span className="card-tile-cmc">{card.cmc}</span>}
         </div>
-        {card.sources?.length > 1 && (
+        {card.sources?.length > 0 && (
           <div className="card-tile-sources" title={card.sources.join(', ')}>
-            {card.sources.length} decks
+            {card.sources.length > 1 ? `${card.sources.length} decks` : card.sources[0]}
           </div>
         )}
       </div>
     </div>
   )
-}
+})
+
+export default CardTile
