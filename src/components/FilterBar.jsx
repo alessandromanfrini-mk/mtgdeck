@@ -26,7 +26,7 @@ function toggle(arr, key) {
 }
 
 export default function FilterBar({ filters, onFiltersChange, total, unique }) {
-  const { search, colors, types, sort } = filters
+  const { search, colors, types, sort, foil } = filters
 
   return (
     <div className="panel filter-bar">
@@ -83,10 +83,18 @@ export default function FilterBar({ filters, onFiltersChange, total, unique }) {
           ))}
         </select>
 
-        {(search || colors.length || types.length) && (
+        <button
+          className={`type-toggle${foil ? ' active' : ''}`}
+          onClick={() => onFiltersChange({ ...filters, foil: !foil })}
+          title="Show foil cards only"
+        >
+          ✦ Foil
+        </button>
+
+        {(search || colors.length || types.length || foil) && (
           <button
             className="btn btn-sm"
-            onClick={() => onFiltersChange({ search: '', colors: [], types: [], sort })}
+            onClick={() => onFiltersChange({ search: '', colors: [], types: [], foil: false, sort })}
           >
             Clear
           </button>

@@ -418,6 +418,24 @@ input:focus, select:focus { border-color: var(--gold); }
   margin-top: 0.2rem;
 }
 
+.finish-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+.finish-badge.foil {
+  color: var(--gold);
+  text-shadow: 0 0 4px rgba(201,168,76,0.6);
+}
+
+.finish-badge.etched {
+  background: rgba(201,168,76,0.15);
+  color: var(--gold);
+  border: 0.5px solid var(--border-strong);
+}
+
 @media (max-width: 600px) {
   .card-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.6rem; }
   .filter-row { gap: 0.4rem; }

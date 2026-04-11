@@ -5,7 +5,6 @@ const SITE_COLORS = {
   Moxfield:  { bg: 'rgba(100,160,220,0.15)', color: '#5090c0', border: 'rgba(100,160,220,0.4)' },
   Archidekt: { bg: 'rgba(120,190,120,0.15)', color: '#3a8a3a', border: 'rgba(120,190,120,0.4)' },
   TappedOut: { bg: 'rgba(220,140,60,0.15)',  color: '#b06020', border: 'rgba(220,140,60,0.4)'  },
-  Deckbox:   { bg: 'rgba(180,100,200,0.15)', color: '#8040a0', border: 'rgba(180,100,200,0.4)' },
 }
 
 const STATUS_STYLE = {
@@ -48,7 +47,7 @@ export default function UrlInput({ urls, onUrlsChange, onLoad, statuses, loading
               <input
                 type="text"
                 value={url}
-                placeholder="Paste a Moxfield, Archidekt, TappedOut, or Deckbox deck URL…"
+                placeholder="Paste a Moxfield, Archidekt, or TappedOut deck URL…"
                 onChange={e => updateUrl(i, e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && i === urls.length - 1) addRow() }}
                 style={{ flex: 1 }}
@@ -64,7 +63,9 @@ export default function UrlInput({ urls, onUrlsChange, onLoad, statuses, loading
                   style={{ color: STATUS_STYLE[st.state]?.color }}
                   title={st.error ?? st.deckName ?? ''}
                 >
-                  {st.state === 'done' ? (st.deckName ?? '✓') : STATUS_STYLE[st.state]?.label}
+                  {st.state === 'done'  && (st.deckName ?? '✓')}
+                  {st.state === 'loading' && 'Loading…'}
+                  {st.state === 'error'  && `✗ ${st.error}`}
                 </span>
               )}
 

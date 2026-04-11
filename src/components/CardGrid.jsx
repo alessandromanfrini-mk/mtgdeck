@@ -44,6 +44,10 @@ function filterCards(cards, filters) {
     result = result.filter(c => filters.types.includes(getMainType(c.type_line)))
   }
 
+  if (filters.foil) {
+    result = result.filter(c => c.isFoil)
+  }
+
   return result
 }
 

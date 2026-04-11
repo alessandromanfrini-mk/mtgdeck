@@ -3,29 +3,45 @@
  * Each returns { deckName: string, cards: [{ name, quantity }] }
  */
 
-const CORS_PROXY = 'https://corsproxy.io/?url='
+// Sites that will always block direct browser requests — go straight to proxy.
+const ALWAYS_PROXY = ['moxfield.com', 'tappedout.net', 'deckbox.org']
 
-async function fetchDirect(url) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+const PROXIES = [
+  url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+]
+
+async function tryFetch(fetchUrl, timeout = 10000) {
+  const res = await fetch(fetchUrl, { signal: AbortSignal.timeout(timeout) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res
 }
 
-async function fetchViaProxy(url) {
-  const res = await fetch(CORS_PROXY + encodeURIComponent(url), {
-    signal: AbortSignal.timeout(12000),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status} (via proxy)`)
-  return res
+async function safeFetch(url) {
+  const needsProxy = ALWAYS_PROXY.some(host => url.includes(host))
+
+  // Try direct first for sites that support CORS
+  if (!needsProxy) {
+    try { return await tryFetch(url) } catch { /* fall through to proxies */ }
+  }
+
+  // Try each proxy in order
+  let lastErr
+  for (const proxy of PROXIES) {
+    try {
+      console.log(`[fetcher] trying proxy: ${proxy(url).slice(0, 60)}…`)
+      return await tryFetch(proxy(url), 14000)
+    } catch (err) {
+      console.warn(`[fetcher] proxy failed:`, err?.message)
+      lastErr = err
+    }
+  }
+  throw new Error(`All fetch attempts failed for ${url} — ${lastErr?.message}`)
 }
 
-async function safeFetch(url) {
-  try {
-    return await fetchDirect(url)
-  } catch {
-    return fetchViaProxy(url)
-  }
-}
+// Archidekt uses full color names; normalise to single-letter MTG symbols.
+const COLOR_NAME_MAP = { White: 'W', Blue: 'U', Black: 'B', Red: 'R', Green: 'G' }
+const COLOR_MAP = name => COLOR_NAME_MAP[name] ?? name
 
 // ── Moxfield ─────────────────────────────────────────────────────────────────
 
@@ -37,14 +53,35 @@ async function fetchMoxfield(url) {
   const id = getMoxfieldId(url)
   if (!id) throw new Error('Cannot parse Moxfield deck ID from URL.')
 
-  const res = await safeFetch(`https://api2.moxfield.com/v3/decks/all/${id}`)
+  // Timestamp busts the proxy cache so edits to the deck are picked up immediately
+  const res = await safeFetch(`https://api2.moxfield.com/v3/decks/all/${id}?_=${Date.now()}`)
   const data = await res.json()
 
   const cards = []
-  for (const section of ['commanders', 'mainboard', 'sideboard']) {
-    for (const entry of Object.values(data[section] ?? {})) {
-      const name = entry.card?.name
-      if (name) cards.push({ name, quantity: entry.quantity ?? 1 })
+
+  // All cards (including commanders) live in data.boards — each board has a `cards` object.
+  // Moxfield returns the full card object, so we carry everything through and skip the
+  // Scryfall enrichment step for these cards.
+  for (const board of Object.values(data.boards ?? {})) {
+    for (const entry of Object.values(board.cards ?? {})) {
+      const c = entry.card
+      if (!c?.name) continue
+      cards.push({
+        name:          c.name,
+        quantity:      entry.quantity ?? 1,
+        isFoil:        entry.isFoil ?? false,
+        finish:        entry.finish ?? 'nonFoil',
+        scryfallId:    c.scryfall_id ?? null,
+        set:           c.set ?? '',
+        setName:       c.set_name ?? '',
+        cn:            c.cn ?? '',
+        typeLine:      c.type_line ?? '',
+        colors:        c.colors ?? [],
+        colorIdentity: c.color_identity ?? [],
+        cmc:           c.cmc ?? 0,
+        rarity:        c.rarity ?? '',
+        manaCost:      c.mana_cost ?? '',
+      })
     }
   }
 
@@ -61,12 +98,37 @@ async function fetchArchidekt(url) {
   const id = getArchidektId(url)
   if (!id) throw new Error('Cannot parse Archidekt deck ID from URL.')
 
-  const res = await safeFetch(`https://archidekt.com/api/decks/${id}/?format=json`)
+  const res = await safeFetch(`https://archidekt.com/api/decks/${id}/?format=json&_=${Date.now()}`)
   const data = await res.json()
 
   const cards = (data.cards ?? [])
     .filter(c => c.card?.oracleCard?.name)
-    .map(c => ({ name: c.card.oracleCard.name, quantity: c.quantity ?? 1 }))
+    .map(c => {
+      const oracle  = c.card.oracleCard
+      const edition = c.card.edition ?? {}
+      const modifier = c.modifier ?? 'Normal'
+      const isFoil  = modifier === 'Foil' || modifier === 'Etched'
+      const finish  = modifier === 'Etched' ? 'etched'
+                    : modifier === 'Foil'   ? 'foil'
+                    : 'nonFoil'
+
+      return {
+        name:          oracle.name,
+        quantity:      c.quantity ?? 1,
+        isFoil,
+        finish,
+        scryfallId:    c.card.uid ?? null,
+        set:           edition.editioncode ?? '',
+        setName:       edition.editionname ?? '',
+        cn:            c.card.collectorNumber ?? '',
+        typeLine:      [...(oracle.superTypes ?? []), ...(oracle.types ?? [])].join(' '),
+        colors:        (oracle.colors ?? []).map(COLOR_MAP),
+        colorIdentity: (oracle.colorIdentity ?? []).map(COLOR_MAP),
+        cmc:           oracle.cmc ?? 0,
+        rarity:        c.card.rarity ?? '',
+        manaCost:      oracle.manaCost ?? '',
+      }
+    })
 
   return { deckName: data.name ?? 'Archidekt Deck', cards }
 }
@@ -81,66 +143,31 @@ async function fetchTappedOut(url) {
   const slug = getTappedOutSlug(url)
   if (!slug) throw new Error('Cannot parse TappedOut deck slug from URL.')
 
-  const res = await safeFetch(`https://tappedout.net/mtg-decks/${slug}/?fmt=json`)
-  const data = await res.json()
+  // Fetch the deck page HTML — TappedOut embeds the full decklist as JSON
+  // in a <script> tag so we can extract set/version/foil data from it.
+  const res  = await safeFetch(`https://tappedout.net/mtg-decks/${slug}/?_=${Date.now()}`)
+  const html = await res.text()
 
-  const cards = []
-  const main = data.main ?? data.mainboard ?? {}
+  // TappedOut renders cards as <li class="member"> with data attributes on the child <a>.
+  // No set/foil data is available in the HTML — Scryfall will enrich by name.
+  const doc     = new DOMParser().parseFromString(html, 'text/html')
+  const members = doc.querySelectorAll('li.member')
 
-  if (Array.isArray(main)) {
-    for (const c of main) {
-      if (c.name) cards.push({ name: c.name, quantity: c.qty ?? c.quantity ?? 1 })
-    }
-  } else {
-    for (const [name, qty] of Object.entries(main)) {
-      cards.push({ name, quantity: typeof qty === 'number' ? qty : 1 })
-    }
+  if (members.length === 0) {
+    throw new Error('Could not find any cards in the TappedOut page. Make sure the deck is public.')
   }
 
-  return { deckName: data.name ?? 'TappedOut Deck', cards }
-}
-
-// ── Deckbox ───────────────────────────────────────────────────────────────────
-
-function getDeckboxId(url) {
-  return url.match(/deckbox\.org\/sets\/(\d+)/)?.[1] ?? null
-}
-
-function parseCSVLine(line) {
-  const cols = []
-  let cur = ''
-  let inQuote = false
-  for (const ch of line) {
-    if (ch === '"') { inQuote = !inQuote }
-    else if (ch === ',' && !inQuote) { cols.push(cur); cur = '' }
-    else { cur += ch }
-  }
-  cols.push(cur)
-  return cols
-}
-
-async function fetchDeckbox(url) {
-  const id = getDeckboxId(url)
-  if (!id) throw new Error('Cannot parse Deckbox set ID from URL.')
-
-  const res = await safeFetch(`https://deckbox.org/sets/${id}/export`)
-  const text = await res.text()
-
-  const lines = text.trim().split('\n').filter(Boolean)
-  const header = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase())
-  const countIdx = header.indexOf('count')
-  const nameIdx = header.indexOf('name')
-  if (nameIdx === -1) throw new Error('Unrecognised Deckbox export format.')
-
   const cards = []
-  for (const line of lines.slice(1)) {
-    const cols = parseCSVLine(line)
-    const name = cols[nameIdx]?.trim()
-    const quantity = parseInt(cols[countIdx] ?? '1', 10) || 1
+  for (const li of members) {
+    const link = li.querySelector('a[data-orig]')
+    if (!link) continue
+    const name     = link.getAttribute('data-orig')
+    const quantity = parseInt(link.getAttribute('data-qty') || '1', 10) || 1
     if (name) cards.push({ name, quantity })
   }
 
-  return { deckName: `Deckbox Set ${id}`, cards }
+  const deckName = doc.querySelector('h1.page-title, h1')?.textContent?.trim() ?? 'TappedOut Deck'
+  return { deckName, cards }
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -150,17 +177,15 @@ export function detectSite(url) {
   if (url.includes('moxfield.com')) return 'Moxfield'
   if (url.includes('archidekt.com')) return 'Archidekt'
   if (url.includes('tappedout.net')) return 'TappedOut'
-  if (url.includes('deckbox.org')) return 'Deckbox'
   return null
 }
 
 export async function fetchDeck(url) {
   const site = detectSite(url.trim())
-  if (!site) throw new Error('Unsupported site. Use Moxfield, Archidekt, TappedOut, or Deckbox.')
+  if (!site) throw new Error('Unsupported site. Use Moxfield, Archidekt, or TappedOut.')
   switch (site) {
     case 'Moxfield':  return fetchMoxfield(url)
     case 'Archidekt': return fetchArchidekt(url)
     case 'TappedOut': return fetchTappedOut(url)
-    case 'Deckbox':   return fetchDeckbox(url)
   }
 }

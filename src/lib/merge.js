@@ -1,25 +1,24 @@
 /**
  * Merge card lists from multiple decks.
- * Duplicate names are collapsed — quantities are summed,
- * source deck names are collected for display.
  *
- * @param {Array<{ url: string, deckName: string, cards: Array<{ name, quantity }> }>} decks
- * @returns {Array<{ name, quantity, sources: string[] }>}
+ * Merge key: scryfallId + finish (or name + finish as fallback).
+ * This keeps different printings and foil/non-foil variants as separate entries
+ * while collapsing identical copies across multiple decks.
  */
 export function mergeDecks(decks) {
   const map = new Map()
 
   for (const deck of decks) {
-    for (const { name, quantity } of deck.cards) {
-      const key = name.toLowerCase()
+    for (const card of deck.cards) {
+      const { name, quantity, scryfallId, finish } = card
+      const key = (scryfallId ?? name.toLowerCase()) + ':' + (finish ?? 'nonFoil')
+
       if (map.has(key)) {
-        const entry = map.get(key)
-        entry.quantity += quantity
-        if (!entry.sources.includes(deck.deckName)) {
-          entry.sources.push(deck.deckName)
-        }
+        const existing = map.get(key)
+        existing.quantity += quantity
+        if (!existing.sources.includes(deck.deckName)) existing.sources.push(deck.deckName)
       } else {
-        map.set(key, { name, quantity, sources: [deck.deckName] })
+        map.set(key, { ...card, sources: [deck.deckName] })
       }
     }
   }

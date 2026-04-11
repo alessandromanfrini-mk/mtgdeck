@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
-import { EXPORT_TARGETS, formatDecklist } from '../lib/export.js'
+import { EXPORT_TARGETS, formatDecklist, formatDeckboxCsv, downloadCsv } from '../lib/export.js'
 
 export default function ExportPanel({ cards }) {
   const [targetId, setTargetId] = useState('moxfield')
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied]     = useState(false)
 
   const target = EXPORT_TARGETS.find(t => t.id === targetId)
-  const text = formatDecklist(cards)
+  const text   = formatDecklist(cards, targetId)
 
   function handleCopy() {
     navigator.clipboard.writeText(text).catch(() => {
@@ -15,6 +15,11 @@ export default function ExportPanel({ cards }) {
     })
     setCopied(true)
     setTimeout(() => setCopied(false), 2500)
+  }
+
+  function handleCsvDownload() {
+    const csv = formatDeckboxCsv(cards)
+    downloadCsv(csv, 'deckbox-import.csv')
   }
 
   if (cards.length === 0) return null
@@ -54,6 +59,13 @@ export default function ExportPanel({ cards }) {
         <button className="btn btn-primary" onClick={handleCopy}>
           {copied ? '✓ Copied!' : 'Copy to Clipboard'}
         </button>
+
+        {target?.hasCsv && (
+          <button className="btn btn-primary" onClick={handleCsvDownload}>
+            Download CSV
+          </button>
+        )}
+
         {target && (
           <a
             className="btn"

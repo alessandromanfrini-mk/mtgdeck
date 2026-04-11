@@ -2,12 +2,21 @@ const DELAY_MS = 100
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
-export function getCardImage(card, size = 'small') {
+export function getCardImage(card, size = 'normal') {
   return (
     card?.image_uris?.[size] ||
     card?.card_faces?.[0]?.image_uris?.[size] ||
     ''
   )
+}
+
+/**
+ * Construct a Scryfall CDN image URL directly from a Scryfall UUID.
+ * Avoids an API round-trip when we already have the ID (e.g. from Moxfield).
+ */
+function imageFromScryfallId(scryfallId, size = 'normal') {
+  if (!scryfallId) return ''
+  return `https://cards.scryfall.io/${size}/front/${scryfallId[0]}/${scryfallId[1]}/${scryfallId}.jpg`
 }
 
 async function fetchCardCollection(identifiers) {
@@ -18,45 +27,106 @@ async function fetchCardCollection(identifiers) {
     signal: AbortSignal.timeout(10000),
   })
   const data = await res.json()
+  if (data.object === 'error') {
+    console.error('[Scryfall] /cards/collection error:', data)
+    return []
+  }
   return data.data ?? []
 }
 
 /**
- * Take a merged card list and enrich each entry with Scryfall data.
- * Uses the bulk /cards/collection endpoint (75 cards per request).
- *
- * @param {Array<{ name, quantity, sources }>} mergedCards
- * @returns {Array<EnrichedCard>}
+ * Fetch foil prices for a list of enriched cards.
+ * Returns a Map of card id → { usd, usd_foil, usd_etched }.
+ * Only cards with a valid Scryfall UUID are queried.
  */
-export async function enrichCards(mergedCards) {
-  const identifiers = mergedCards.map(c => ({ name: c.name }))
+export async function fetchPrices(cards) {
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const withId = cards.filter(c => UUID.test(c.id))
+  if (withId.length === 0) return new Map()
 
+  const identifiers = withId.map(c => ({ id: c.id }))
   const sfCards = []
   for (let i = 0; i < identifiers.length; i += 75) {
     if (i > 0) await sleep(DELAY_MS)
     const batch = await fetchCardCollection(identifiers.slice(i, i + 75))
     sfCards.push(...batch)
   }
+  return new Map(sfCards.map(c => [c.id, c.prices ?? {}]))
+}
 
-  const byName = new Map(sfCards.map(c => [c.name.toLowerCase(), c]))
+/**
+ * Enrich a merged card list with display data.
+ *
+ * Cards that already carry full data (scryfallId + typeLine, e.g. from Moxfield)
+ * are converted directly — no API call needed.
+ * Cards from other sites go through the Scryfall bulk endpoint.
+ */
+export async function enrichCards(mergedCards) {
+  const needsApi = mergedCards.filter(c => !c.scryfallId || !c.typeLine)
+
+  // Bulk-fetch only the cards that need it
+  let sfByName = new Map()
+  let sfById   = new Map()
+
+  if (needsApi.length > 0) {
+    const identifiers = needsApi.map(c =>
+      c.scryfallId ? { id: c.scryfallId } : { name: c.name }
+    )
+    const sfCards = []
+    for (let i = 0; i < identifiers.length; i += 75) {
+      if (i > 0) await sleep(DELAY_MS)
+      const batch = await fetchCardCollection(identifiers.slice(i, i + 75))
+      sfCards.push(...batch)
+    }
+    sfById   = new Map(sfCards.map(c => [c.id, c]))
+    sfByName = new Map(sfCards.map(c => [c.name.toLowerCase(), c]))
+  }
 
   return mergedCards.map(entry => {
-    const sf = byName.get(entry.name.toLowerCase())
+    // Cards with full Moxfield data — build directly, no API needed
+    if (entry.scryfallId && entry.typeLine) {
+      return {
+        id:            entry.scryfallId,
+        name:          entry.name,
+        quantity:      entry.quantity,
+        sources:       entry.sources,
+        imageUrl:      imageFromScryfallId(entry.scryfallId),
+        colors:        entry.colors        ?? [],
+        color_identity: entry.colorIdentity ?? [],
+        type_line:     entry.typeLine      ?? '',
+        cmc:           entry.cmc           ?? 0,
+        rarity:        entry.rarity        ?? '',
+        set:           entry.set           ?? '',
+        set_name:      entry.setName       ?? '',
+        cn:            entry.cn            ?? '',
+        mana_cost:     entry.manaCost      ?? '',
+        isFoil:        entry.isFoil        ?? false,
+        finish:        entry.finish        ?? 'nonFoil',
+        prices:        {},
+      }
+    }
+
+    // Cards from other sites — use Scryfall API data
+    const sf = (entry.scryfallId && sfById.get(entry.scryfallId))
+            || sfByName.get(entry.name.toLowerCase())
     return {
-      id:            sf?.id ?? entry.name,
+      id:            sf?.id              ?? entry.scryfallId ?? entry.name,
       name:          entry.name,
       quantity:      entry.quantity,
       sources:       entry.sources,
-      imageUrl:      sf ? getCardImage(sf) : '',
-      colors:        sf?.colors ?? [],
-      color_identity: sf?.color_identity ?? [],
-      type_line:     sf?.type_line ?? '',
-      cmc:           sf?.cmc ?? 0,
-      rarity:        sf?.rarity ?? '',
-      set:           sf?.set ?? '',
-      set_name:      sf?.set_name ?? '',
-      prices:        sf?.prices ?? {},
-      mana_cost:     sf?.mana_cost ?? sf?.card_faces?.[0]?.mana_cost ?? '',
+      imageUrl:      sf ? getCardImage(sf) : imageFromScryfallId(entry.scryfallId),
+      colors:        sf?.colors          ?? entry.colors        ?? [],
+      color_identity: sf?.color_identity ?? entry.colorIdentity ?? [],
+      type_line:     sf?.type_line       ?? entry.typeLine      ?? '',
+      cmc:           sf?.cmc             ?? entry.cmc           ?? 0,
+      rarity:        sf?.rarity          ?? entry.rarity        ?? '',
+      set:           sf?.set             ?? entry.set           ?? '',
+      set_name:      sf?.set_name        ?? entry.setName       ?? '',
+      cn:            sf?.collector_number ?? entry.cn           ?? '',
+      mana_cost:     sf?.mana_cost       ?? entry.manaCost      ?? '',
+      isFoil:        entry.isFoil        ?? false,
+      finish:        entry.finish        ?? 'nonFoil',
+      prices:        sf?.prices          ?? {},
     }
   })
 }

@@ -44,7 +44,11 @@ export default function CardTile({ card }) {
 
       <div className="card-tile-info">
         <div className="card-tile-name" title={card.name}>{card.name}</div>
-        <ColorPips colorIdentity={card.color_identity} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <ColorPips colorIdentity={card.color_identity} />
+          {card.finish === 'etched' && <span className="finish-badge etched" title="Etched foil">E</span>}
+          {card.isFoil && card.finish !== 'etched' && <span className="finish-badge foil" title="Foil">✦</span>}
+        </div>
         <div className="card-tile-meta">
           {mainType && <span>{mainType}</span>}
           {card.cmc > 0 && <span className="card-tile-cmc">{card.cmc}</span>}
