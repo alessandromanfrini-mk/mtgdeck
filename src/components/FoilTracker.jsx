@@ -100,7 +100,9 @@ export default function FoilTracker({ cards }) {
           <div style={{
             height: '100%',
             width: `${foilPct}%`,
-            background: 'linear-gradient(90deg, var(--gold), #f5d78e)',
+            background: 'linear-gradient(90deg, var(--gold-dark), var(--gold-light), var(--gold-dark))',
+            backgroundSize: '200% auto',
+            animation: 'bar-shimmer 2.5s linear infinite',
             borderRadius: 4,
             transition: 'width 0.5s ease',
           }} />
