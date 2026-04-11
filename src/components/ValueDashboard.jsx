@@ -1,18 +1,43 @@
 import React, { useState, useMemo } from 'react'
 import { fetchPrices } from '../lib/scryfall.js'
 
-function cardPrice(card, priceMap) {
+const MARKETPLACES = [
+  { id: 'tcgplayer',  label: 'TCGPlayer',  currency: '$',   note: 'USD' },
+  { id: 'cardmarket', label: 'Cardmarket', currency: '€',   note: 'EUR' },
+  { id: 'mtgo',       label: 'MTGO',       currency: '',    note: 'tix' },
+]
+
+function cardPrice(card, priceMap, marketplace) {
   const p = priceMap.get(card.id)
   if (!p) return 0
+
+  if (marketplace === 'cardmarket') {
+    if (card.finish === 'foil' || card.finish === 'etched')
+      return parseFloat(p.eur_foil ?? p.eur ?? '0') || 0
+    return parseFloat(p.eur ?? '0') || 0
+  }
+
+  if (marketplace === 'mtgo') {
+    return parseFloat(p.tix ?? '0') || 0
+  }
+
+  // TCGPlayer (default)
   if (card.finish === 'foil')   return parseFloat(p.usd_foil   ?? p.usd ?? '0') || 0
   if (card.finish === 'etched') return parseFloat(p.usd_etched ?? p.usd_foil ?? p.usd ?? '0') || 0
   return parseFloat(p.usd ?? '0') || 0
 }
 
+function fmt(value, marketplace) {
+  const m = MARKETPLACES.find(x => x.id === marketplace)
+  if (marketplace === 'mtgo') return `${value.toFixed(1)} tix`
+  return `${m.currency}${value.toFixed(2)}`
+}
+
 export default function ValueDashboard({ cards }) {
-  const [priceMap, setPriceMap]         = useState(new Map())
-  const [loaded, setLoaded]             = useState(false)
-  const [loading, setLoading]           = useState(false)
+  const [priceMap, setPriceMap]       = useState(new Map())
+  const [loaded, setLoaded]           = useState(false)
+  const [loading, setLoading]         = useState(false)
+  const [marketplace, setMarketplace] = useState('tcgplayer')
 
   const deckNames = useMemo(
     () => [...new Set(cards.flatMap(c => c.sources))].sort(),
@@ -32,33 +57,33 @@ export default function ValueDashboard({ cards }) {
 
   const totalValue = useMemo(() => {
     if (!loaded) return null
-    return cards.reduce((sum, c) => sum + cardPrice(c, priceMap) * c.quantity, 0)
-  }, [cards, priceMap, loaded])
+    return cards.reduce((sum, c) => sum + cardPrice(c, priceMap, marketplace) * c.quantity, 0)
+  }, [cards, priceMap, loaded, marketplace])
 
   const foilValue = useMemo(() => {
     if (!loaded) return null
     return cards
       .filter(c => c.finish !== 'nonFoil')
-      .reduce((sum, c) => sum + cardPrice(c, priceMap) * c.quantity, 0)
-  }, [cards, priceMap, loaded])
+      .reduce((sum, c) => sum + cardPrice(c, priceMap, marketplace) * c.quantity, 0)
+  }, [cards, priceMap, loaded, marketplace])
 
   const perDeck = useMemo(() => {
     if (!loaded) return []
     return deckNames.map(name => {
       const dc = cards.filter(c => c.sources.includes(name))
-      const value = dc.reduce((sum, c) => sum + cardPrice(c, priceMap) * c.quantity, 0)
+      const value = dc.reduce((sum, c) => sum + cardPrice(c, priceMap, marketplace) * c.quantity, 0)
       return { name, value, count: dc.reduce((s, c) => s + c.quantity, 0) }
     }).sort((a, b) => b.value - a.value)
-  }, [cards, priceMap, loaded, deckNames])
+  }, [cards, priceMap, loaded, deckNames, marketplace])
 
   const topCards = useMemo(() => {
     if (!loaded) return []
     return [...cards]
-      .map(c => ({ ...c, _price: cardPrice(c, priceMap) }))
+      .map(c => ({ ...c, _price: cardPrice(c, priceMap, marketplace) }))
       .filter(c => c._price > 0)
       .sort((a, b) => b._price - a._price)
       .slice(0, 10)
-  }, [cards, priceMap, loaded])
+  }, [cards, priceMap, loaded, marketplace])
 
   if (cards.length === 0) return null
 
@@ -81,12 +106,26 @@ export default function ValueDashboard({ cards }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
+          {/* Marketplace selector */}
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginRight: '0.25rem' }}>Prices from</span>
+            {MARKETPLACES.map(m => (
+              <button
+                key={m.id}
+                className={`btn btn-sm${marketplace === m.id ? ' btn-primary' : ''}`}
+                onClick={() => setMarketplace(m.id)}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
           {/* Summary row */}
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
             {[
-              { label: 'Total Value',  value: `$${totalValue.toFixed(2)}` },
-              { label: 'Foil Value',   value: `$${foilValue.toFixed(2)}` },
-              { label: 'Non-Foil',     value: `$${(totalValue - foilValue).toFixed(2)}` },
+              { label: 'Total Value',  value: fmt(totalValue, marketplace) },
+              { label: 'Foil Value',   value: fmt(foilValue, marketplace) },
+              { label: 'Non-Foil',     value: fmt(totalValue - foilValue, marketplace) },
               { label: 'Unique Cards', value: cards.length },
             ].map(({ label, value }) => (
               <div key={label} style={{ background: 'var(--surface2)', borderRadius: 8, padding: '0.75rem 1.25rem', flex: '1 1 120px' }}>
@@ -107,7 +146,7 @@ export default function ValueDashboard({ cards }) {
                     <div key={name}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.2rem' }}>
                         <span>{name}</span>
-                        <span style={{ color: 'var(--gold)' }}>${value.toFixed(2)} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· {count} cards</span></span>
+                        <span style={{ color: 'var(--gold)' }}>{fmt(value, marketplace)} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· {count} cards</span></span>
                       </div>
                       <div style={{ height: 5, background: 'var(--surface2)', borderRadius: 3, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: 'var(--gold)', borderRadius: 3 }} />
@@ -128,11 +167,9 @@ export default function ValueDashboard({ cards }) {
                   <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.3rem 0.6rem', background: 'var(--surface2)', borderRadius: 6, fontSize: '0.82rem' }}>
                     <span style={{ color: 'var(--text-muted)', minWidth: 18, fontSize: '0.72rem' }}>#{i + 1}</span>
                     <span style={{ flex: 1 }}>{c.name}</span>
-                    {c.finish !== 'nonFoil' && (
-                      <span style={{ fontSize: '0.72rem', color: 'var(--gold)' }}>✦</span>
-                    )}
-                    <span style={{ color: 'var(--gold)', fontVariantNumeric: 'tabular-nums', minWidth: 56, textAlign: 'right' }}>
-                      ${c._price.toFixed(2)}
+                    {c.finish !== 'nonFoil' && <span style={{ fontSize: '0.72rem', color: 'var(--gold)' }}>✦</span>}
+                    <span style={{ color: 'var(--gold)', fontVariantNumeric: 'tabular-nums', minWidth: 60, textAlign: 'right' }}>
+                      {fmt(c._price, marketplace)}
                     </span>
                   </div>
                 ))}

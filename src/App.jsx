@@ -13,33 +13,53 @@ import {
   loadState, saveState, clearState,
   loadCollection, saveCollection, clearCollection, mergeIntoCollection,
 } from './lib/storage.js'
+import { isConfigured, dbLoadCollection, dbSaveCollection, dbClearCollection } from './lib/db.js'
 
 const DEFAULT_FILTERS = { search: '', colors: [], types: [], foil: false, sort: 'name' }
 
 const saved = loadState()
 
 export default function App() {
-  const [tab, setTab]                 = useState('decks')   // 'decks' | 'collection'
+  const [tab, setTab]                   = useState('decks')
 
-  // ── Loaded-decks state ────────────────────────────────────────────────────
-  const [urls, setUrls]               = useState(saved.urls)
-  const [statuses, setStatuses]       = useState(saved.statuses)
-  const [loading, setLoading]         = useState(false)
+  // ── Loaded-decks state ─────────────────────────────────────────────────────
+  const [urls, setUrls]                 = useState(saved.urls)
+  const [statuses, setStatuses]         = useState(saved.statuses)
+  const [loading, setLoading]           = useState(false)
   const [loadingStage, setLoadingStage] = useState('')
-  const [cards, setCards]             = useState(saved.cards)
-  const [deckFilters, setDeckFilters] = useState(DEFAULT_FILTERS)
-  const [deckView, setDeckView]       = useState('gallery')
+  const [cards, setCards]               = useState(saved.cards)
+  const [deckFilters, setDeckFilters]   = useState(DEFAULT_FILTERS)
+  const [deckView, setDeckView]         = useState('gallery')
 
-  // ── Collection state ──────────────────────────────────────────────────────
-  const [collection, setCollection]   = useState(() => loadCollection())
-  const [colFilters, setColFilters]   = useState(DEFAULT_FILTERS)
-  const [colView, setColView]         = useState('gallery')
-  const [saved_, setSaved_]           = useState(false)  // flash feedback
+  // ── Collection state ───────────────────────────────────────────────────────
+  const [collection, setCollection]       = useState([])
+  const [colLoading, setColLoading]       = useState(true)
+  const [colFilters, setColFilters]       = useState(DEFAULT_FILTERS)
+  const [colView, setColView]             = useState('gallery')
+  const [savedFlash, setSavedFlash]       = useState(false)
+  const [colError, setColError]           = useState(null)
 
+  // Load collection on mount (Supabase if configured, else localStorage)
+  useEffect(() => {
+    if (isConfigured) {
+      dbLoadCollection()
+        .then(cards => setCollection(cards ?? []))
+        .catch(err => {
+          console.error('[db] load failed:', err)
+          setColError('Could not connect to database.')
+          setCollection(loadCollection())
+        })
+        .finally(() => setColLoading(false))
+    } else {
+      setCollection(loadCollection())
+      setColLoading(false)
+    }
+  }, [])
+
+  // Persist session state to localStorage
   useEffect(() => { saveState(urls, cards, statuses) }, [urls, cards, statuses])
-  useEffect(() => { saveCollection(collection) }, [collection])
 
-  // ── Deck loading ──────────────────────────────────────────────────────────
+  // ── Deck loading ───────────────────────────────────────────────────────────
   async function handleLoad(activeUrls) {
     setLoading(true)
     setCards([])
@@ -85,15 +105,26 @@ export default function App() {
     setLoading(false)
   }
 
-  // ── Save loaded cards → collection ────────────────────────────────────────
-  function handleSaveToCollection() {
+  // ── Save to collection ─────────────────────────────────────────────────────
+  async function handleSaveToCollection() {
     const merged = mergeIntoCollection(collection, cards)
     setCollection(merged)
-    setSaved_(true)
-    setTimeout(() => setSaved_(false), 2500)
+    setSavedFlash(true)
+    setTimeout(() => setSavedFlash(false), 2500)
+
+    if (isConfigured) {
+      try {
+        await dbSaveCollection(merged)
+      } catch (err) {
+        console.error('[db] save failed:', err)
+        setColError('Save failed — check your database connection.')
+      }
+    } else {
+      saveCollection(merged)
+    }
   }
 
-  // ── Clear helpers ─────────────────────────────────────────────────────────
+  // ── Clear helpers ──────────────────────────────────────────────────────────
   function handleClearDecks() {
     clearState()
     setUrls([''])
@@ -102,26 +133,30 @@ export default function App() {
     setDeckFilters(DEFAULT_FILTERS)
   }
 
-  function handleClearCollection() {
+  async function handleClearCollection() {
     if (!window.confirm('Clear your entire collection? This cannot be undone.')) return
-    clearCollection()
     setCollection([])
     setColFilters(DEFAULT_FILTERS)
+    setColError(null)
+    if (isConfigured) {
+      try {
+        await dbClearCollection()
+      } catch (err) {
+        console.error('[db] clear failed:', err)
+      }
+    } else {
+      clearCollection()
+    }
   }
 
   const deckTotal = useMemo(() => cards.reduce((s, c) => s + c.quantity, 0), [cards])
   const colTotal  = useMemo(() => collection.reduce((s, c) => s + c.quantity, 0), [collection])
 
-  // ── Shared card-viewer section ─────────────────────────────────────────────
+  // ── Shared card viewer ─────────────────────────────────────────────────────
   function CardViewer({ cardList, filters, onFiltersChange, view, onViewChange, total }) {
     return (
       <>
-        <FilterBar
-          filters={filters}
-          onFiltersChange={onFiltersChange}
-          total={total}
-          unique={cardList.length}
-        />
+        <FilterBar filters={filters} onFiltersChange={onFiltersChange} total={total} unique={cardList.length} />
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
           <button className={`btn btn-sm${view === 'gallery' ? ' btn-primary' : ''}`} onClick={() => onViewChange('gallery')}>Gallery</button>
           <button className={`btn btn-sm${view === 'binder'  ? ' btn-primary' : ''}`} onClick={() => onViewChange('binder')}>Binder</button>
@@ -142,75 +177,40 @@ export default function App() {
       <div className="divider">✦ ✦ ✦</div>
 
       {/* Top-level tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
-        <button
-          className={`btn${tab === 'decks' ? ' btn-primary' : ''}`}
-          onClick={() => setTab('decks')}
-        >
-          Loaded Decks
-        </button>
-        <button
-          className={`btn${tab === 'collection' ? ' btn-primary' : ''}`}
-          onClick={() => setTab('collection')}
-          style={{ position: 'relative' }}
-        >
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', alignItems: 'center' }}>
+        <button className={`btn${tab === 'decks'      ? ' btn-primary' : ''}`} onClick={() => setTab('decks')}>Loaded Decks</button>
+        <button className={`btn${tab === 'collection' ? ' btn-primary' : ''}`} onClick={() => setTab('collection')}>
           My Collection
-          {collection.length > 0 && (
-            <span style={{ marginLeft: '0.4rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              ({collection.length})
-            </span>
-          )}
+          {collection.length > 0 && <span style={{ marginLeft: '0.4rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>({collection.length})</span>}
         </button>
+        {isConfigured && (
+          <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#4a9a4a' }}>● Database connected</span>
+        )}
       </div>
 
       {/* ── Loaded Decks tab ── */}
       {tab === 'decks' && (
         <>
-          <UrlInput
-            urls={urls}
-            onUrlsChange={setUrls}
-            onLoad={handleLoad}
-            statuses={statuses}
-            loading={loading}
-          />
+          <UrlInput urls={urls} onUrlsChange={setUrls} onLoad={handleLoad} statuses={statuses} loading={loading} />
 
           {loading && loadingStage && (
-            <div className="loading-state">
-              <div className="spinner" />
-              {loadingStage}
-            </div>
+            <div className="loading-state"><div className="spinner" />{loadingStage}</div>
           )}
 
           {!loading && cards.length > 0 && (
             <>
-              {/* Action bar */}
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleSaveToCollection}
-                >
-                  {saved_ ? '✓ Saved to Collection' : '+ Save to Collection'}
+                <button className="btn btn-primary" onClick={handleSaveToCollection}>
+                  {savedFlash ? '✓ Saved to Collection' : '+ Save to Collection'}
                 </button>
-                <button className="btn btn-sm btn-danger" onClick={handleClearDecks}>
-                  Clear
-                </button>
+                <button className="btn btn-sm btn-danger" onClick={handleClearDecks}>Clear</button>
               </div>
-
-              <CardViewer
-                cardList={cards}
-                filters={deckFilters}
-                onFiltersChange={setDeckFilters}
-                view={deckView}
-                onViewChange={setDeckView}
-                total={deckTotal}
-              />
+              <CardViewer cardList={cards} filters={deckFilters} onFiltersChange={setDeckFilters} view={deckView} onViewChange={setDeckView} total={deckTotal} />
             </>
           )}
 
           {!loading && cards.length === 0 && Object.keys(statuses).length === 0 && (
-            <div className="loading-state">
-              Paste one or more deck URLs above to view your collection.
-            </div>
+            <div className="loading-state">Paste one or more deck URLs above to view your collection.</div>
           )}
         </>
       )}
@@ -218,7 +218,13 @@ export default function App() {
       {/* ── My Collection tab ── */}
       {tab === 'collection' && (
         <>
-          {collection.length === 0 ? (
+          {colError && (
+            <div style={{ color: '#c04030', fontSize: '0.82rem', marginBottom: '0.75rem' }}>⚠ {colError}</div>
+          )}
+
+          {colLoading ? (
+            <div className="loading-state"><div className="spinner" />Loading collection…</div>
+          ) : collection.length === 0 ? (
             <div className="loading-state" style={{ padding: '4rem 1rem' }}>
               <div style={{ marginBottom: '0.75rem' }}>Your collection is empty.</div>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -231,23 +237,11 @@ export default function App() {
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   {collection.length} unique cards · {colTotal} total
                 </span>
-                <button
-                  className="btn btn-sm btn-danger"
-                  style={{ marginLeft: 'auto' }}
-                  onClick={handleClearCollection}
-                >
+                <button className="btn btn-sm btn-danger" style={{ marginLeft: 'auto' }} onClick={handleClearCollection}>
                   Clear Collection
                 </button>
               </div>
-
-              <CardViewer
-                cardList={collection}
-                filters={colFilters}
-                onFiltersChange={setColFilters}
-                view={colView}
-                onViewChange={setColView}
-                total={colTotal}
-              />
+              <CardViewer cardList={collection} filters={colFilters} onFiltersChange={setColFilters} view={colView} onViewChange={setColView} total={colTotal} />
             </>
           )}
         </>
