@@ -2,14 +2,13 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { copyFileSync } from 'fs'
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 export default defineConfig({
-  plugins: [
-    react(),
-    {
-      name: 'spa-fallback',
-      closeBundle() {
-        copyFileSync('dist/index.html', 'dist/404.html')
-      },
+  plugins: [react(), {
+    name: 'spa-fallback',
+    closeBundle() {
+      copyFileSync('dist/index.html', 'dist/404.html')
     },
-  ],
+  }, cloudflare()],
 })
