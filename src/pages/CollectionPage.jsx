@@ -7,7 +7,7 @@ import BinderView from '../components/BinderView.jsx'
 import ValueDashboard from '../components/ValueDashboard.jsx'
 import FoilTracker from '../components/FoilTracker.jsx'
 
-const DEFAULT_FILTERS = { search: '', colors: [], types: [], foil: false, sort: 'name', decks: [] }
+const DEFAULT_FILTERS = { search: '', colors: [], types: [], foil: false, sort: 'name' }
 
 export default function CollectionPage({
   collection, colLoading, colError,
@@ -17,13 +17,6 @@ export default function CollectionPage({
   const [view, setView]       = useState('gallery')
 
   const total = useMemo(() => collection.reduce((s, c) => s + c.quantity, 0), [collection])
-
-  // Unique source names across all collection cards (only shown when 2+)
-  const availableSources = useMemo(() => {
-    const set = new Set()
-    for (const c of collection) for (const s of (c.sources ?? [])) set.add(s)
-    return [...set].sort()
-  }, [collection])
 
   if (colLoading) {
     return <div className="loading-state"><div className="spinner" />Loading collection…</div>
@@ -58,7 +51,7 @@ export default function CollectionPage({
             </button>
           </div>
 
-          <FilterBar filters={filters} onFiltersChange={setFilters} total={total} unique={collection.length} availableSources={availableSources} />
+          <FilterBar filters={filters} onFiltersChange={setFilters} total={total} unique={collection.length} />
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
             <button className={`btn btn-sm${view === 'gallery' ? ' btn-primary' : ''}`} onClick={() => setView('gallery')}>Gallery</button>
             <button className={`btn btn-sm${view === 'binder'  ? ' btn-primary' : ''}`} onClick={() => setView('binder')}>Binder</button>

@@ -137,11 +137,6 @@ const CardTile = memo(function CardTile({ card, onRemove }) {
           {mainType && <span>{mainType}</span>}
           {card.cmc > 0 && <span className="card-tile-cmc">{card.cmc}</span>}
         </div>
-        {card.sources?.length > 0 && (
-          <div className="card-tile-sources" title={card.sources.join(', ')}>
-            {card.sources.length > 1 ? `${card.sources.length} decks` : card.sources[0]}
-          </div>
-        )}
       </div>
     </div>
   )

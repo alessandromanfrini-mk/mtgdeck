@@ -24,14 +24,13 @@ const SORT_OPTIONS = [
 function toggle(arr, key) {
   return arr.includes(key) ? arr.filter(k => k !== key) : [...arr, key]
 }
+export default function FilterBar({ filters, onFiltersChange, total, unique }) {
+  const { search, colors, types, sort, foil } = filters
 
-export default function FilterBar({ filters, onFiltersChange, total, unique, availableSources }) {
-  const { search, colors, types, sort, foil, decks = [] } = filters
-
-  const hasActiveFilters = search || colors.length || types.length || foil || decks.length
+  const hasActiveFilters = search || colors.length || types.length || foil
 
   function clear() {
-    onFiltersChange({ search: '', colors: [], types: [], foil: false, sort, decks: [] })
+    onFiltersChange({ search: '', colors: [], types: [], foil: false, sort })
   }
 
   return (
@@ -103,29 +102,6 @@ export default function FilterBar({ filters, onFiltersChange, total, unique, ava
         )}
       </div>
 
-      {/* Row 2: source/deck filter — only when collection has 2+ sources */}
-      {availableSources?.length >= 2 && (
-        <div className="filter-row" style={{ marginTop: '0.65rem' }}>
-          <span style={{
-            fontSize: '0.68rem', color: 'var(--text-muted)',
-            fontFamily: 'Cinzel, serif', letterSpacing: '0.1em', whiteSpace: 'nowrap',
-          }}>
-            SOURCE
-          </span>
-          <div className="filter-group" style={{ flexWrap: 'wrap' }}>
-            {availableSources.map(src => (
-              <button
-                key={src}
-                className={`type-toggle${decks.includes(src) ? ' active' : ''}`}
-                onClick={() => onFiltersChange({ ...filters, decks: toggle(decks, src) })}
-                title={src}
-              >
-                {src.length > 24 ? src.slice(0, 22) + '…' : src}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

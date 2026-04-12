@@ -90,17 +90,8 @@ export function mergeIntoCollection(existing, incoming) {
     if (map.has(key)) {
       const ex = map.get(key)
       ex.quantity += c.quantity
-      for (const s of (c.sources ?? [])) {
-        if (!ex.sources?.includes(s)) ex.sources = [...(ex.sources ?? []), s]
-        ex.sourceQuantities = {
-          ...(ex.sourceQuantities ?? {}),
-          [s]: (ex.sourceQuantities?.[s] ?? 0) + c.quantity,
-        }
-      }
     } else {
-      const sourceQuantities = {}
-      for (const s of (c.sources ?? [])) sourceQuantities[s] = c.quantity
-      map.set(key, { ...c, sourceQuantities })
+      map.set(key, { ...c })
     }
   }
 

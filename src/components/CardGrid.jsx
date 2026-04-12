@@ -48,10 +48,6 @@ function filterCards(cards, filters) {
     result = result.filter(c => c.isFoil)
   }
 
-  if (filters.decks?.length > 0) {
-    result = result.filter(c => c.sources?.some(s => filters.decks.includes(s)))
-  }
-
   return result
 }
 
@@ -90,13 +86,9 @@ export default function CardGrid({ cards, filters, onRemove }) {
   return (
     <>
       <div className="card-grid">
-        {shown.map(card => {
-          // When filtering by deck, show the quantity for the selected deck(s) only
-          const displayCard = (filters.decks?.length > 0 && card.sourceQuantities)
-            ? { ...card, quantity: filters.decks.reduce((sum, d) => sum + (card.sourceQuantities[d] ?? 0), 0) || card.quantity }
-            : card
-          return <CardTile key={card._srcKey ?? (card.id + ':' + (card.finish ?? 'nonFoil') + ':' + (card.sources?.[0] ?? ''))} card={displayCard} onRemove={onRemove} />
-        })}
+        {shown.map(card => (
+          <CardTile key={card._srcKey ?? (card.id + ':' + (card.finish ?? 'nonFoil'))} card={card} onRemove={onRemove} />
+        ))}
       </div>
       {remaining > 0 && (
         <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
