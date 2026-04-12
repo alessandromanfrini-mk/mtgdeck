@@ -8,12 +8,12 @@
  *  4. Delete snapshots older than 90 days
  *  5. Compute % change vs 7d / 30d / 90d ago for every tracked card
  *  6. Upsert results into price_movers
- *  7. Feed top-25 movers to Claude and store brief in market_briefs
+ *  7. Generate AI market brief from top-25 movers and store in market_briefs
  *
  * Required environment variables:
  *   SUPABASE_URL          — your project URL (not the anon key one)
  *   SUPABASE_SERVICE_KEY  — service role key (bypasses RLS)
- *   ANTHROPIC_API_KEY     — Claude API key
+ *   ANTHROPIC_API_KEY     — LLM API key (optional — brief is skipped if absent)
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -33,7 +33,7 @@ const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY 
 
 const BATCH       = 500
 const MIN_PRICE   = 1.0       // skip cards under $1
-const SNAP_DAYS   = 90        // rolling window
+const SNAP_DAYS   = 30        // rolling window
 
 // ── 1. Download bulk data ─────────────────────────────────────────────────────
 
@@ -137,7 +137,7 @@ async function updateMovers(todayCards) {
   const todayMap = new Map(todayCards.map(c => [c.card_id, c]))
 
   // Fetch historical snapshots for each window
-  const windows = { '7d': 7, '30d': 30, '90d': 90 }
+  const windows = { '7d': 7, '30d': 30 }
   const histMaps = {}
 
   for (const [label, days] of Object.entries(windows)) {

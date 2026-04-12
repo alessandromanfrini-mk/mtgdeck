@@ -16,7 +16,7 @@ export async function getLatestBrief() {
   return data ?? null
 }
 
-/** Top gaining cards for a given time window (7d / 30d / 90d). */
+/** Top gaining cards for a given time window (7d / 30d). */
 export async function getTopGainers(window = '7d', limit = 50) {
   const col = pctCol(window)
   const { data } = await supabase
@@ -29,7 +29,7 @@ export async function getTopGainers(window = '7d', limit = 50) {
   return data ?? []
 }
 
-/** Top losing cards for a given time window. */
+/** Top losing cards for a given time window (7d / 30d). */
 export async function getTopLosers(window = '7d', limit = 50) {
   const col = pctCol(window)
   const { data } = await supabase
@@ -54,5 +54,5 @@ export async function getCardHistory(cardId) {
 }
 
 function pctCol(window) {
-  return { '7d': 'pct_7d', '30d': 'pct_30d', '90d': 'pct_90d' }[window] ?? 'pct_7d'
+  return { '7d': 'pct_7d', '30d': 'pct_30d' }[window] ?? 'pct_7d'
 }

@@ -116,7 +116,7 @@ function MoverRow({ card, pctField, selected, onSelect }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-const WINDOWS    = ['7d', '30d', '90d']
+const WINDOWS    = ['7d', '30d']
 const DIRECTIONS = ['all', 'gainers', 'losers']
 
 export default function MarketPage() {
@@ -155,7 +155,7 @@ export default function MarketPage() {
     })
   }, [selected])
 
-  const pctField = { '7d': 'pct_7d', '30d': 'pct_30d', '90d': 'pct_90d' }[window]
+  const pctField = { '7d': 'pct_7d', '30d': 'pct_30d' }[window]
 
   // Build display list based on direction
   const rows = direction === 'gainers' ? gainers
@@ -276,7 +276,7 @@ export default function MarketPage() {
                 <span style={{ color: 'var(--gold)', fontFamily: 'Cinzel, serif' }}>${parseFloat(selected.price_now).toFixed(2)}</span>
               </div>
               <div style={{ fontSize: '0.8rem', display: 'flex', gap: '0.6rem' }}>
-                {['7d', '30d', '90d'].map(w => selected[`pct_${w}`] != null && (
+                {['7d', '30d'].map(w => selected[`pct_${w}`] != null && (
                   <span key={w} style={{ color: 'var(--text-muted)' }}>
                     {w}: <PctBadge value={selected[`pct_${w}`]} />
                   </span>
