@@ -8,6 +8,7 @@ import { isConfigured, dbLoadCollection, dbSaveCollection, dbClearCollection, db
 
 const DecksPage      = lazy(() => import('./pages/DecksPage.jsx'))
 const CollectionPage = lazy(() => import('./pages/CollectionPage.jsx'))
+const MarketPage     = lazy(() => import('./pages/MarketPage.jsx'))
 
 export default function App() {
   // ── Shared collection state ────────────────────────────────────────────────
@@ -130,6 +131,9 @@ export default function App() {
               <span className="nav-tab-count">({collection.length})</span>
             )}
           </NavLink>
+          <NavLink to="/market" className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`}>
+            Market
+          </NavLink>
           {isConfigured && (
             <span className="db-indicator">● synced</span>
           )}
@@ -156,6 +160,7 @@ export default function App() {
                 onImport={handleSaveToCollection}
               />
             } />
+            <Route path="/market" element={<MarketPage />} />
           </Routes>
         </Suspense>
 
