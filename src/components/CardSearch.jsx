@@ -114,11 +114,11 @@ export default function CardSearch({ onAdd }) {
         {showSugg && suggestions.length > 0 && (
           <div style={{
             position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
-            background: 'rgba(14, 12, 24, 0.97)',
-            backdropFilter: 'blur(16px)',
+            background: 'rgba(9, 10, 20, 0.98)',
+            backdropFilter: 'blur(18px)',
             border: '1px solid var(--border-strong)',
-            borderRadius: 10, marginTop: 4, overflow: 'hidden',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,168,67,0.08)',
+            borderRadius: 7, marginTop: 4, overflow: 'hidden',
+            boxShadow: '0 14px 44px rgba(0,0,0,0.75), 0 0 0 1px rgba(168,180,204,0.06)',
           }}>
             {suggestions.map(name => (
               <div
@@ -129,7 +129,7 @@ export default function CardSearch({ onAdd }) {
                   borderBottom: '1px solid var(--border)',
                   transition: 'background 0.1s',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(212,168,67,0.08)'}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(168,180,204,0.06)'}
                 onMouseLeave={e => e.currentTarget.style.background = ''}
               >
                 {name}
@@ -150,7 +150,7 @@ export default function CardSearch({ onAdd }) {
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
           {/* Printing select */}
           <div style={{ flex: '1 1 220px' }}>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.10em', marginBottom: '0.4rem', fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
               Printing ({printings.length})
             </div>
             <select

@@ -13,7 +13,7 @@ const PIP_STYLE = {
 
 const PIP_COLORS = {
   W: { background: 'var(--mana-W)', color: '#555' },
-  U: { background: 'var(--mana-U)', color: '#1a3a6e' },
+  U: { background: 'var(--mana-U)', color: '#C0D8FF' },
   B: { background: 'var(--mana-B)', color: '#fff' },
   R: { background: 'var(--mana-R)', color: '#fff' },
   G: { background: 'var(--mana-G)', color: '#1a3a1a' },

@@ -4,7 +4,7 @@ import ColorPips from './ColorPips.jsx'
 const RARITY_COLOR = {
   common:   '#888',
   uncommon: '#7AAABB',
-  rare:     '#D4A843',
+  rare:     '#B89228',
   mythic:   '#E07030',
 }
 
@@ -31,10 +31,17 @@ const CardTile = memo(function CardTile({ card, onRemove }) {
     const x = (e.clientX - rect.left) / rect.width - 0.5
     const y = (e.clientY - rect.top)  / rect.height - 0.5
     el.style.transform = `perspective(700px) rotateY(${x * 14}deg) rotateX(${-y * 14}deg) scale(1.04)`
+    // Foil specular position — percentage within the card
+    el.style.setProperty('--mx', `${((e.clientX - rect.left) / rect.width * 100).toFixed(1)}%`)
+    el.style.setProperty('--my', `${((e.clientY - rect.top)  / rect.height * 100).toFixed(1)}%`)
   }
 
   function handleMouseLeave() {
-    if (tileRef.current) tileRef.current.style.transform = ''
+    if (tileRef.current) {
+      tileRef.current.style.transform = ''
+      tileRef.current.style.removeProperty('--mx')
+      tileRef.current.style.removeProperty('--my')
+    }
     setConfirming(false)
   }
 
@@ -103,7 +110,7 @@ const CardTile = memo(function CardTile({ card, onRemove }) {
           }}
         >
           <span style={{
-            fontFamily: 'Cinzel, serif', fontSize: '0.68rem',
+            fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '0.70rem',
             letterSpacing: '0.08em', color: 'var(--text-main)',
             textAlign: 'center', lineHeight: 1.4,
           }}>

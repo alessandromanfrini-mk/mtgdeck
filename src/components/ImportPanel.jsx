@@ -75,7 +75,7 @@ function CardPreview({ card }) {
         style={{
           height: PREVIEW_H,
           borderRadius: 14,
-          boxShadow: '0 24px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(212,168,67,0.2)',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(168,180,204,0.18)',
           display: 'block',
         }}
       />
@@ -89,9 +89,9 @@ function ImportRow({ card, checked, onToggle, onHover, onLeave }) {
   const [hover, setHov] = useState(false)
 
   const bg = hover
-    ? 'rgba(212,168,67,0.1)'
+    ? 'rgba(168,180,204,0.08)'
     : checked
-      ? 'rgba(212,168,67,0.05)'
+      ? 'rgba(168,180,204,0.04)'
       : 'transparent'
 
   return (
@@ -110,12 +110,12 @@ function ImportRow({ card, checked, onToggle, onHover, onLeave }) {
       {/* Checkbox */}
       <div style={{
         width: 15, height: 15, borderRadius: 3, flexShrink: 0,
-        border: `1.5px solid ${checked ? 'var(--gold)' : 'var(--border-strong)'}`,
-        background: checked ? 'var(--gold)' : 'transparent',
+        border: `1.5px solid ${checked ? 'var(--silver)' : 'var(--border-strong)'}`,
+        background: checked ? 'var(--silver)' : 'transparent',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         transition: 'all 0.15s',
       }}>
-        {checked && <span style={{ color: '#0A0508', fontSize: '0.55rem', fontWeight: 900, lineHeight: 1 }}>✓</span>}
+        {checked && <span style={{ color: '#080910', fontSize: '0.55rem', fontWeight: 900, lineHeight: 1 }}>✓</span>}
       </div>
 
       {/* Name */}
@@ -125,7 +125,7 @@ function ImportRow({ card, checked, onToggle, onHover, onLeave }) {
 
       {/* Set · CN */}
       {(card.set || card.cn) && (
-        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Cinzel, serif', flexShrink: 0, letterSpacing: '0.04em' }}>
+        <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, letterSpacing: '0.03em' }}>
           {card.set?.toUpperCase()}{card.cn ? ` · ${card.cn}` : ''}
         </span>
       )}
@@ -222,12 +222,12 @@ export default function ImportPanel({ onImport }) {
             padding: '0.6rem 0.9rem',
             background: 'rgba(255,255,255,0.05)',
             border: '1px solid var(--border-strong)',
-            borderRadius: 10, color: 'var(--text-main)',
-            fontFamily: 'Crimson Pro, serif', fontSize: '0.9rem',
+            borderRadius: 5, color: 'var(--text-main)',
+            fontFamily: "'Lora', Georgia, serif", fontSize: '0.9rem',
             lineHeight: 1.5, outline: 'none',
             transition: 'border-color 0.2s, box-shadow 0.2s',
           }}
-          onFocus={e => { e.target.style.borderColor = 'var(--gold)'; e.target.style.boxShadow = '0 0 0 3px rgba(212,168,67,0.14)' }}
+          onFocus={e => { e.target.style.borderColor = 'var(--silver)'; e.target.style.boxShadow = '0 0 0 3px rgba(168,180,204,0.10)' }}
           onBlur={e  => { e.target.style.borderColor = 'var(--border-strong)'; e.target.style.boxShadow = '' }}
         />
         <button

@@ -58,7 +58,7 @@ function PctBadge({ value }) {
   const bg    = up ? 'rgba(74,154,74,0.12)' : 'rgba(200,72,42,0.12)'
   return (
     <span style={{
-      background: bg, color, fontFamily: 'Cinzel, serif',
+      background: bg, color, fontFamily: "'JetBrains Mono', monospace",
       fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.45rem',
       borderRadius: 5, letterSpacing: '0.04em', whiteSpace: 'nowrap',
     }}>
@@ -79,7 +79,7 @@ function MoverRow({ card, pctField, selected, onSelect }) {
         padding: '0.45rem 0.75rem',
         borderBottom: '1px solid var(--border)',
         cursor: 'pointer',
-        background: selected ? 'rgba(212,168,67,0.08)' : 'transparent',
+        background: selected ? 'rgba(168,180,204,0.07)' : 'transparent',
         transition: 'background 0.12s',
       }}
       onMouseEnter={e => { if (!selected) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
@@ -93,16 +93,16 @@ function MoverRow({ card, pctField, selected, onSelect }) {
 
       {/* Name + set */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Lora', Georgia, serif" }}>
           {card.name}
         </div>
-        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Cinzel, serif', letterSpacing: '0.04em' }}>
+        <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.04em' }}>
           {card.set_code?.toUpperCase()}{card.collector_number ? ` · ${card.collector_number}` : ''}
         </div>
       </div>
 
       {/* Price */}
-      <span style={{ fontSize: '0.85rem', fontFamily: 'Cinzel, serif', color: 'var(--text-gold)', flexShrink: 0 }}>
+      <span style={{ fontSize: '0.85rem', fontFamily: "'JetBrains Mono', monospace", color: 'var(--silver)', flexShrink: 0 }}>
         ${parseFloat(card.price_now).toFixed(2)}
       </span>
 
@@ -168,8 +168,8 @@ export default function MarketPage() {
       {/* Header */}
       <div style={{ marginBottom: '1.5rem' }}>
         <h2 style={{
-          fontFamily: 'Cinzel, serif', fontSize: '1.1rem', fontWeight: 600,
-          color: 'var(--gold)', letterSpacing: '0.1em', margin: 0,
+          fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '1.1rem', fontWeight: 600,
+          color: 'var(--silver)', letterSpacing: '0.14em', margin: 0, textTransform: 'uppercase',
         }}>
           Market Trends
         </h2>
@@ -184,7 +184,7 @@ export default function MarketPage() {
       {brief?.brief && (
         <div className="panel" style={{ marginBottom: '1.25rem' }}>
           <div className="panel-title">AI Market Brief</div>
-          <p style={{ fontSize: '0.88rem', lineHeight: 1.7, color: 'var(--text-main)', margin: 0, fontStyle: 'italic' }}>
+          <p style={{ fontSize: '0.88rem', lineHeight: 1.75, color: 'var(--text-main)', margin: 0, fontStyle: 'italic', fontFamily: "'Lora', Georgia, serif" }}>
             "{brief.brief}"
           </p>
         </div>
@@ -262,31 +262,52 @@ export default function MarketPage() {
       {selected && (
         <>
           <div className="section-divider"><span>✦</span></div>
-          <div className="panel">
-            <div className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>{selected.name}</span>
-              <button className="btn btn-sm" onClick={() => setSelected(null)}>✕ Close</button>
+          <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+            {/* Art banner */}
+            {selected.image_url && (
+              <div className="market-art-banner">
+                <img
+                  className="market-art-img"
+                  src={selected.image_url.replace('/normal/', '/art_crop/')}
+                  alt=""
+                  onError={e => { e.currentTarget.style.display = 'none' }}
+                />
+                <div className="market-art-overlay" />
+                <div className="market-art-meta">
+                  <span className="market-art-name">{selected.name}</span>
+                  <button className="btn btn-sm" onClick={() => setSelected(null)}>✕</button>
+                </div>
+              </div>
+            )}
+
+            <div style={{ padding: '1rem 1.5rem 1.5rem' }}>
+              {!selected.image_url && (
+                <div className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{selected.name}</span>
+                  <button className="btn btn-sm" onClick={() => setSelected(null)}>✕ Close</button>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.03em' }}>
+                  {selected.set_name} · #{selected.collector_number}
+                </div>
+                <div style={{ fontSize: '0.8rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Current: </span>
+                  <span style={{ color: 'var(--silver)', fontFamily: "'JetBrains Mono', monospace" }}>${parseFloat(selected.price_now).toFixed(2)}</span>
+                </div>
+                <div style={{ fontSize: '0.8rem', display: 'flex', gap: '0.6rem' }}>
+                  {['7d', '30d'].map(w => selected[`pct_${w}`] != null && (
+                    <span key={w} style={{ color: 'var(--text-muted)' }}>
+                      {w}: <PctBadge value={selected[`pct_${w}`]} />
+                    </span>
+                  ))}
+                </div>
+              </div>
+              {histLoading
+                ? <div className="loading-state" style={{ padding: '1rem' }}><div className="spinner" style={{ width: 20, height: 20, margin: '0 auto' }} /></div>
+                : <PriceChart history={history} />
+              }
             </div>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                {selected.set_name} · #{selected.collector_number}
-              </div>
-              <div style={{ fontSize: '0.8rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Current: </span>
-                <span style={{ color: 'var(--gold)', fontFamily: 'Cinzel, serif' }}>${parseFloat(selected.price_now).toFixed(2)}</span>
-              </div>
-              <div style={{ fontSize: '0.8rem', display: 'flex', gap: '0.6rem' }}>
-                {['7d', '30d'].map(w => selected[`pct_${w}`] != null && (
-                  <span key={w} style={{ color: 'var(--text-muted)' }}>
-                    {w}: <PctBadge value={selected[`pct_${w}`]} />
-                  </span>
-                ))}
-              </div>
-            </div>
-            {histLoading
-              ? <div className="loading-state" style={{ padding: '1rem' }}><div className="spinner" style={{ width: 20, height: 20, margin: '0 auto' }} /></div>
-              : <PriceChart history={history} />
-            }
           </div>
         </>
       )}

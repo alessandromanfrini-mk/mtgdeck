@@ -45,11 +45,12 @@ function TopCard({ card, rank, price }) {
       {/* Foil shimmer */}
       {isFoil && (
         <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: 'linear-gradient(135deg, transparent 30%, rgba(255,200,100,0.15) 50%, transparent 70%)',
-          backgroundSize: '200% 200%',
-          animation: 'foil-move 3s linear infinite',
+          position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 'inherit',
+          background: 'linear-gradient(125deg, transparent 0%, rgba(255,45,130,0.38) 14%, rgba(255,200,20,0.36) 27%, rgba(20,255,130,0.34) 41%, rgba(20,145,255,0.34) 55%, rgba(215,20,255,0.34) 69%, rgba(255,45,130,0.30) 82%, transparent 100%)',
+          backgroundSize: '320% 320%',
+          animation: 'foil-drift 3.5s ease-in-out infinite alternate, foil-hue 5s linear infinite',
           mixBlendMode: 'color-dodge',
+          opacity: 0.78,
         }} />
       )}
 
@@ -59,7 +60,7 @@ function TopCard({ card, rank, price }) {
         background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
         borderRadius: 6, padding: '2px 7px',
         fontSize: '0.7rem', fontWeight: 700, color: rs.label,
-        fontFamily: "'Cinzel', serif",
+        fontFamily: "'JetBrains Mono', monospace",
       }}>
         #{rank}
       </div>
@@ -228,8 +229,8 @@ export default function ValueDashboard({ cards }) {
               { label: 'Unique Cards', value: cards.length },
             ].map(({ label, value }) => (
               <div key={label} style={{ background: 'var(--surface2)', borderRadius: 8, padding: '0.75rem 1.25rem', flex: '1 1 120px' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--gold)' }}>{value}</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.10em', fontFamily: "'Cormorant Garamond', Georgia, serif" }}>{label}</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--silver)', fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
               </div>
             ))}
           </div>

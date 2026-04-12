@@ -4,7 +4,6 @@ import FilterBar from '../components/FilterBar.jsx'
 import CardGrid from '../components/CardGrid.jsx'
 import BinderView from '../components/BinderView.jsx'
 import ExportPanel from '../components/ExportPanel.jsx'
-import FoilTracker from '../components/FoilTracker.jsx'
 import ValueDashboard from '../components/ValueDashboard.jsx'
 import { fetchDeck } from '../lib/fetchers.js'
 import { mergeDecks } from '../lib/merge.js'
@@ -13,6 +12,13 @@ import { loadState, saveState, clearState } from '../lib/storage.js'
 
 const DEFAULT_FILTERS = { search: '', colors: [], types: [], foil: false, sort: 'name' }
 const saved = loadState()
+
+const RARITY_ORDER = { mythic: 4, rare: 3, uncommon: 2, common: 1 }
+
+function artCropUrl(url) {
+  if (!url) return null
+  return url.replace(/\/(normal|large|small|border_crop|png)\//, '/art_crop/')
+}
 
 export default function DecksPage({ collection, onSaveToCollection, savedFlash }) {
   const [urls, setUrls]           = useState(saved.urls)
@@ -81,6 +87,13 @@ export default function DecksPage({ collection, onSaveToCollection, savedFlash }
 
   const total = useMemo(() => cards.reduce((s, c) => s + c.quantity, 0), [cards])
 
+  const spotlightCard = useMemo(() => {
+    if (!cards.length) return null
+    return [...cards].sort((a, b) =>
+      (RARITY_ORDER[b.rarity] ?? 0) - (RARITY_ORDER[a.rarity] ?? 0)
+    )[0]
+  }, [cards])
+
   return (
     <div className="page-enter">
       <UrlInput urls={urls} onUrlsChange={setUrls} onLoad={handleLoad} statuses={statuses} loading={loading} />
@@ -92,6 +105,26 @@ export default function DecksPage({ collection, onSaveToCollection, savedFlash }
       {!loading && cards.length > 0 && (
         <>
           <div className="section-divider"><span>✦</span></div>
+
+          {/* Spotlight — most impressive card in the loaded deck */}
+          {spotlightCard?.imageUrl && (
+            <div className="deck-spotlight">
+              <img
+                className="deck-spotlight-img"
+                src={artCropUrl(spotlightCard.imageUrl)}
+                alt=""
+                onError={e => { e.currentTarget.style.display = 'none' }}
+              />
+              <div className="deck-spotlight-overlay" />
+              <div className="deck-spotlight-content">
+                <span className="deck-spotlight-label">◆ Featured Card</span>
+                <span className="deck-spotlight-name">{spotlightCard.name}</span>
+                <span className="deck-spotlight-sub">
+                  {spotlightCard.rarity} · {total} cards loaded
+                </span>
+              </div>
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
             <button className="btn btn-primary" onClick={() => onSaveToCollection(cards)}>
@@ -115,9 +148,6 @@ export default function DecksPage({ collection, onSaveToCollection, savedFlash }
 
               <div className="section-divider"><span>✦</span></div>
               <ValueDashboard cards={cards} />
-
-              <div className="section-divider"><span>✦</span></div>
-              <FoilTracker cards={cards} />
 
               <div className="section-divider"><span>✦</span></div>
               <ExportPanel cards={cards} />

@@ -8,7 +8,7 @@ const SITE_COLORS = {
 }
 
 const STATUS_STYLE = {
-  loading: { color: 'var(--gold)',    label: 'Loading…' },
+  loading: { color: 'var(--silver)',   label: 'Loading…' },
   done:    { color: '#4a9a4a',        label: '✓' },
   error:   { color: '#c04030',        label: '✗' },
 }

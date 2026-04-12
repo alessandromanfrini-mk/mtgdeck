@@ -51,7 +51,7 @@ export default function ExportPanel({ cards }) {
           id="export-textarea"
           readOnly
           value={text}
-          style={{ width: '100%', height: 200, fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-main)', background: 'transparent', border: 'none', resize: 'vertical', outline: 'none', lineHeight: 1.6 }}
+          style={{ width: '100%', height: 200, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.78rem', color: 'var(--text-main)', background: 'transparent', border: 'none', resize: 'vertical', outline: 'none', lineHeight: 1.7 }}
         />
       </div>
 
