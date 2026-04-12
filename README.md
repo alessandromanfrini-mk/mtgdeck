@@ -1,16 +1,15 @@
 # Alessandro's Library
 
-A personal Magic: The Gathering collection manager built with React. Import decks, track your cards across printings, monitor foil completions, analyse collection value, and follow market price trends — all in one place.
+A personal Magic: The Gathering collection manager built with React. Import decks, track your cards across printings, analyse collection value, and follow market price trends — all in one place.
 
 ## Features
 
 - **Deck import** — load decks from Moxfield, Archidekt, or TappedOut by URL; or paste any plain-text or Moxfield export directly
-- **Collection management** — add and remove individual cards, search by name with autocomplete, select specific printings and finishes (non-foil / foil / etched)
+- **Collection management** — add and remove individual cards, search by name with autocomplete, select specific printings and finishes (non-foil / foil / etched / rainbow foil / surge foil / phyrexian / oil slick)
 - **Version tracking** — different printings of the same card are stored and displayed as separate entries
 - **Gallery & Binder views** — browse your collection as a card gallery or as a set-sorted binder list
-- **Filters** — filter by colour identity, card type, rarity, foil finish, and source deck; sort by name, CMC, quantity, type, colour, or rarity
-- **Foil completion tracker** — see which cards you still need to foil out per deck
-- **Value dashboard** — top 10 most expensive cards in your collection with live TCGPlayer market prices via Scryfall
+- **Filters** — filter by colour identity, card type, rarity, and foil finish; sort by name, CMC, quantity, type, colour, or rarity
+- **Value dashboard** — top 10 most expensive cards with live prices via Scryfall, switchable between TCGPlayer, Cardmarket, and MTGO
 - **Market Trends** — daily price tracking across all MTG cards with AI-generated market briefs, top gainers/losers, and per-card price history charts
 - **Persistent storage** — collection synced to Supabase (PostgreSQL); falls back to localStorage when offline
 
@@ -70,13 +69,15 @@ The workflow runs automatically at 08:00 UTC every day and can also be triggered
 src/
 ├── components/
 │   ├── CardGrid.jsx        # Paginated card gallery with filters
-│   ├── CardTile.jsx        # Individual card with 3D tilt, foil shimmer
-│   ├── CardSearch.jsx      # Autocomplete search + printing selector
+│   ├── CardTile.jsx        # Individual card with 3D tilt and per-finish foil shimmer
+│   ├── CardSearch.jsx      # Autocomplete search + printing and finish selector
 │   ├── ImportPanel.jsx     # Paste decklist to import into collection
-│   ├── FilterBar.jsx       # Search, colour, type, sort, source filters
+│   ├── ExportPanel.jsx     # Export collection as plain-text decklist
+│   ├── FilterBar.jsx       # Search, colour, type, and sort controls
 │   ├── BinderView.jsx      # Set-grouped binder list view
-│   ├── FoilTracker.jsx     # Foil completion tracker with hover previews
-│   └── ValueDashboard.jsx  # Top 10 most valuable cards
+│   ├── ColorPips.jsx       # Mana colour identity pip display
+│   ├── UrlInput.jsx        # Deck URL input with loading state
+│   └── ValueDashboard.jsx  # Collection value with top-10 cards and per-marketplace prices
 ├── lib/
 │   ├── fetchers.js         # Moxfield, Archidekt, TappedOut API clients
 │   ├── scryfall.js         # Scryfall enrichment, price fetching, autocomplete
