@@ -1,6 +1,15 @@
 import React, { useState, useMemo } from 'react'
 import { fetchPrices } from '../lib/scryfall.js'
 
+const FOIL_CLASS = {
+  foil:           'foil-shimmer',
+  etched:         'foil-shimmer etched',
+  'rainbow-foil': 'foil-shimmer rainbow',
+  'surge-foil':   'foil-shimmer surge',
+  phyrexian:      'foil-shimmer phyrexian',
+  'oil-slick':    'foil-shimmer oil-slick',
+}
+
 const RANK_STYLES = [
   { border: '2px solid #FFD700', glow: '0 0 18px rgba(255,215,0,0.55), 0 8px 32px rgba(0,0,0,0.7)', label: '#FFD700' }, // gold
   { border: '2px solid #C0C0C0', glow: '0 0 14px rgba(192,192,192,0.45), 0 8px 28px rgba(0,0,0,0.6)', label: '#C0C0C0' }, // silver
@@ -42,17 +51,8 @@ function TopCard({ card, rank, price }) {
         style={{ width: '100%', display: 'block' }}
       />
 
-      {/* Foil shimmer */}
-      {isFoil && (
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 'inherit',
-          background: 'linear-gradient(125deg, transparent 0%, rgba(255,45,130,0.38) 14%, rgba(255,200,20,0.36) 27%, rgba(20,255,130,0.34) 41%, rgba(20,145,255,0.34) 55%, rgba(215,20,255,0.34) 69%, rgba(255,45,130,0.30) 82%, transparent 100%)',
-          backgroundSize: '320% 320%',
-          animation: 'foil-drift 3.5s ease-in-out infinite alternate, foil-hue 5s linear infinite',
-          mixBlendMode: 'color-dodge',
-          opacity: 0.78,
-        }} />
-      )}
+      {/* Foil shimmer — effect varies by finish type */}
+      {isFoil && <div className={FOIL_CLASS[card.finish] ?? 'foil-shimmer'} />}
 
       {/* Rank badge */}
       <div style={{
@@ -71,7 +71,9 @@ function TopCard({ card, rank, price }) {
           position: 'absolute', top: 6, right: 6,
           fontSize: '0.68rem', color: 'var(--gold-light)',
           textShadow: '0 0 6px rgba(240,200,96,0.9)',
-        }}>✦</div>
+        }}>
+          {card.finish === 'surge-foil' ? '⚡' : card.finish === 'phyrexian' ? 'Φ' : card.finish === 'oil-slick' ? '◈' : '✦'}
+        </div>
       )}
 
       {/* Price footer */}

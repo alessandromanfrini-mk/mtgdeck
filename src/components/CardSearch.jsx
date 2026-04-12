@@ -2,9 +2,13 @@ import React, { useState, useRef, useEffect } from 'react'
 import { autocompleteCards, searchCardPrintings, getCardImage } from '../lib/scryfall.js'
 
 const FINISHES = [
-  { value: 'nonFoil', label: 'Non-Foil' },
-  { value: 'foil',    label: 'Foil' },
-  { value: 'etched',  label: 'Etched' },
+  { value: 'nonFoil',      label: 'Non-Foil' },
+  { value: 'foil',         label: 'Foil' },
+  { value: 'etched',       label: 'Etched' },
+  { value: 'rainbow-foil', label: 'Rainbow Foil' },
+  { value: 'surge-foil',   label: 'Surge Foil' },
+  { value: 'phyrexian',    label: 'Phyrexian' },
+  { value: 'oil-slick',    label: 'Oil Slick' },
 ]
 
 export default function CardSearch({ onAdd }) {
@@ -88,13 +92,16 @@ export default function CardSearch({ onAdd }) {
     setQuantity(1)
   }
 
-  // Check which finishes are actually available for the selected printing
+  // Check which finishes are actually available for the selected printing.
+  // Special foil treatments (rainbow, surge, phyrexian, oil-slick) are shown
+  // whenever the card is available in foil, since Scryfall doesn't distinguish them.
   const availableFinishes = selectedCard
     ? FINISHES.filter(f => {
-        if (f.value === 'nonFoil')  return selectedCard.nonfoil  !== false
-        if (f.value === 'foil')     return selectedCard.foil     === true
+        if (f.value === 'nonFoil')  return selectedCard.nonfoil !== false
         if (f.value === 'etched')   return selectedCard.finishes?.includes('etched')
-        return false
+        if (f.value === 'foil')     return selectedCard.foil === true
+        // rainbow-foil, surge-foil, phyrexian, oil-slick — available if card has foil
+        return selectedCard.foil === true
       })
     : FINISHES
 

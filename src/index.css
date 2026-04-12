@@ -539,55 +539,159 @@ input:focus, select:focus {
   transform: scale(1.04);
 }
 
-/* ── Foil shimmer — multi-layer holographic effect ───────────────────────── */
+/* ── Foil shimmer — finish-type-specific effects ─────────────────────────── */
+/* Each type uses a different blend mode for genuinely distinct appearances.  */
+/* screen = rainbow-on-dark | color-dodge = electric glow | overlay = metal  */
+/* difference = dark inversion                                                */
 
+/* Structural base */
 .foil-shimmer {
   position: absolute;
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
+  overflow: hidden;
 
+  /* ── Normal foil: classic diagonal teal→blue→violet→pink→gold ── */
+  mix-blend-mode: screen;
   background:
-    /* Layer 1: specular hotspot — tracks mouse via CSS vars */
-    radial-gradient(
-      ellipse 60% 40% at var(--mx, 50%) var(--my, 38%),
-      rgba(255, 255, 255, 0.32) 0%,
-      rgba(255, 255, 255, 0.10) 38%,
-      transparent 65%
-    ),
-    /* Layer 2: wide rainbow band — drifts position over time */
-    linear-gradient(
-      125deg,
-      transparent               0%,
-      rgba(255,  45, 130, 0.42) 12%,
-      rgba(255, 200,  20, 0.40) 25%,
-      rgba( 20, 255, 130, 0.38) 38%,
-      rgba( 20, 145, 255, 0.38) 52%,
-      rgba(215,  20, 255, 0.38) 66%,
-      rgba(255,  45, 130, 0.34) 80%,
-      transparent               100%
-    );
+    radial-gradient(ellipse 58% 36% at var(--mx, 50%) var(--my, 40%),
+      rgba(255,255,255,0.28) 0%, transparent 60%),
+    linear-gradient(112deg,
+      transparent              0%,
+      rgba(  0,210,225, 0.45) 16%,
+      rgba( 70,125,255, 0.40) 30%,
+      rgba(170, 75,255, 0.36) 44%,
+      rgba(255, 95,150, 0.32) 58%,
+      rgba(255,195, 50, 0.28) 72%,
+      transparent             86%);
+  background-size: 100% 100%, 230% 230%;
+  filter: saturate(1.6);
+  animation: foil-sweep 5s ease-in-out infinite alternate;
+  opacity: 0.70;
+}
 
-  background-size: 100% 100%, 340% 340%;
+/* ── Rainbow foil: full ROYGBIV spectrum, vividly saturated, wide coverage ── */
+.foil-shimmer.rainbow {
+  mix-blend-mode: screen;
+  background:
+    radial-gradient(ellipse 55% 35% at var(--mx, 50%) var(--my, 40%),
+      rgba(255,255,255,0.22) 0%, transparent 55%),
+    linear-gradient(105deg,
+      rgba(255, 35, 35, 0.52) 0%,
+      rgba(255,145, 18, 0.48) 14%,
+      rgba(230,225, 35, 0.45) 28%,
+      rgba( 35,205, 65, 0.45) 42%,
+      rgba( 28,198,218, 0.50) 56%,
+      rgba( 60,110,255, 0.50) 70%,
+      rgba(185, 60,255, 0.48) 84%,
+      rgba(255, 35, 35, 0.45) 100%);
+  background-size: 100% 100%, 180% 180%;
+  filter: saturate(2.2) brightness(1.05);
+  animation: foil-sweep 3s ease-in-out infinite alternate;
+  opacity: 0.75;
+}
+
+/* ── Surge foil: electric cyan/white — color-dodge creates brilliant glow ── */
+.foil-shimmer.surge {
   mix-blend-mode: color-dodge;
-  animation: foil-drift 3.5s ease-in-out infinite alternate, foil-hue 5s linear infinite;
+  background:
+    radial-gradient(ellipse 48% 28% at var(--mx, 50%) var(--my, 40%),
+      rgba(180,240,255, 0.55) 0%, transparent 52%),
+    linear-gradient(118deg,
+      transparent                0%,
+      rgba( 15,185,255, 0.70)  9%,
+      rgba(255,255,255, 0.45) 16%,
+      rgba( 15,185,255, 0.65) 23%,
+      rgba( 95, 58,255, 0.60) 34%,
+      rgba(255,255,255, 0.35) 41%,
+      rgba( 95, 58,255, 0.55) 48%,
+      rgba( 15,185,255, 0.62) 59%,
+      rgba(255,255,255, 0.30) 66%,
+      rgba( 15,185,255, 0.52) 77%,
+      rgba(255,255,255, 0.22) 84%,
+      transparent              93%);
+  background-size: 100% 100%, 270% 270%;
+  filter: saturate(1.9) brightness(1.15);
+  animation: foil-surge 2.4s ease-in-out infinite alternate;
+  opacity: 0.52;
+}
+
+/* ── Etched foil: warm gold/silver — overlay blend gives metallic texture ── */
+.foil-shimmer.etched {
+  mix-blend-mode: overlay;
+  background:
+    radial-gradient(ellipse 72% 52% at var(--mx, 50%) var(--my, 40%),
+      rgba(255,228,138, 0.55) 0%,
+      rgba(220,198,110, 0.18) 50%,
+      transparent 72%),
+    linear-gradient(118deg,
+      transparent                 0%,
+      rgba(255,230,150, 0.48)  20%,
+      rgba(195,212,240, 0.38)  40%,
+      rgba(255,220,130, 0.44)  60%,
+      rgba(195,208,235, 0.34)  80%,
+      transparent               96%);
+  background-size: 100% 100%, 195% 195%;
+  filter: saturate(1.1) brightness(1.18);
+  animation: foil-sweep 7s ease-in-out infinite alternate;
   opacity: 0.78;
 }
 
-@keyframes foil-drift {
-  0%   { background-position: 0% 0%, 0%   0%;   }
-  100% { background-position: 0% 0%, 100% 100%; }
+/* ── Phyrexian foil: toxic green/black — color-dodge makes it glow acidic ── */
+.foil-shimmer.phyrexian {
+  mix-blend-mode: color-dodge;
+  background:
+    radial-gradient(ellipse 52% 36% at var(--mx, 50%) var(--my, 45%),
+      rgba( 80,220, 60, 0.40) 0%, transparent 58%),
+    linear-gradient(118deg,
+      transparent                0%,
+      rgba(  0,155, 35, 0.65)  13%,
+      rgba(  8,  8,  4, 0.50)  24%,
+      rgba(  0,188, 55, 0.60)  35%,
+      rgba( 28,138,185, 0.28)  47%,
+      rgba(  0,115, 28, 0.55)  59%,
+      rgba( 55, 25,110, 0.28)  71%,
+      rgba(  0,168, 48, 0.50)  83%,
+      transparent               95%);
+  background-size: 100% 100%, 255% 255%;
+  filter: saturate(2.2) brightness(0.88);
+  animation: foil-sweep 6s ease-in-out infinite alternate;
+  opacity: 0.55;
 }
 
-@keyframes foil-hue {
-  0%   { filter: hue-rotate(0deg)   saturate(2.4) brightness(1.15); }
-  100% { filter: hue-rotate(360deg) saturate(2.4) brightness(1.15); }
+/* ── Oil slick: dark inverted rainbow — difference blend makes it alien ── */
+.foil-shimmer.oil-slick {
+  mix-blend-mode: difference;
+  background:
+    radial-gradient(ellipse 58% 38% at var(--mx, 50%) var(--my, 40%),
+      rgba( 85, 48, 12, 0.55) 0%, transparent 62%),
+    linear-gradient(108deg,
+      rgba(255, 28, 28, 0.65) 0%,
+      rgba(255,118, 15, 0.60) 13%,
+      rgba(210,210, 15, 0.58) 26%,
+      rgba( 15,178, 45, 0.60) 39%,
+      rgba( 15,168,198, 0.62) 52%,
+      rgba( 48, 88,255, 0.62) 65%,
+      rgba(168, 28,255, 0.60) 78%,
+      rgba(255, 28,108, 0.58) 91%,
+      rgba(255, 28, 28, 0.55) 100%);
+  background-size: 100% 100%, 270% 270%;
+  filter: saturate(1.8) brightness(0.75);
+  animation: foil-sweep 4s ease-in-out infinite alternate;
+  opacity: 0.55;
 }
 
-/* foil-move kept for ValueDashboard TopCard inline style */
-@keyframes foil-move {
-  0%   { background-position: 0%   0%;   }
-  100% { background-position: 100% 100%; }
+@keyframes foil-sweep {
+  0%   { background-position: 0% 0%, 8% 12%; }
+  100% { background-position: 0% 0%, 92% 88%; }
+}
+
+@keyframes foil-surge {
+  0%   { background-position: 0% 0%,  5%  5%; }
+  38%  { background-position: 0% 0%, 74% 26%; }
+  62%  { background-position: 0% 0%, 26% 74%; }
+  100% { background-position: 0% 0%, 95% 95%; }
 }
 
 .qty-badge {
@@ -692,6 +796,32 @@ input:focus, select:focus {
   background: rgba(168,180,204,0.08);
   color: var(--silver);
   border: 1px solid var(--border-strong);
+}
+
+.finish-badge.rainbow-foil {
+  background: linear-gradient(90deg, #ff6060, #ffa020, #ffee30, #30e060, #30d0e0, #6080ff, #c050ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: saturate(1.4);
+}
+
+.finish-badge.surge-foil {
+  color: #40d0ff;
+  text-shadow: 0 0 8px rgba(40,200,255,0.75);
+}
+
+.finish-badge.phyrexian {
+  color: #40e050;
+  text-shadow: 0 0 8px rgba(20,180,40,0.70);
+}
+
+.finish-badge.oil-slick {
+  background: linear-gradient(90deg, #ff3040, #b020ff, #2040ff, #20c0a0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: saturate(1.6) brightness(0.9);
 }
 
 /* ── Progress bar shimmer ────────────────────────────────────────────────────── */

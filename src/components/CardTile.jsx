@@ -17,11 +17,20 @@ function getMainType(typeLine) {
 
 const PLACEHOLDER = 'data:image/svg+xml,%3Csvg xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" viewBox%3D"0 0 146 204"%3E%3Crect width%3D"146" height%3D"204" fill%3D"%23D4A84318" rx%3D"8"%2F%3E%3C%2Fsvg%3E'
 
+const FOIL_CLASS = {
+  foil:           'foil-shimmer',
+  etched:         'foil-shimmer etched',
+  'rainbow-foil': 'foil-shimmer rainbow',
+  'surge-foil':   'foil-shimmer surge',
+  phyrexian:      'foil-shimmer phyrexian',
+  'oil-slick':    'foil-shimmer oil-slick',
+}
+
 const CardTile = memo(function CardTile({ card, onRemove }) {
   const [imgErr, setImgErr]       = useState(false)
   const [confirming, setConfirming] = useState(false)
   const tileRef = useRef(null)
-  const isFoil = card.finish === 'foil' || card.finish === 'etched'
+  const isFoil = card.finish && card.finish !== 'nonFoil'
   const mainType = getMainType(card.type_line)
 
   function handleMouseMove(e) {
@@ -60,8 +69,8 @@ const CardTile = memo(function CardTile({ card, onRemove }) {
           onError={() => setImgErr(true)}
         />
 
-        {/* Rainbow foil shimmer on foil/etched cards */}
-        {isFoil && <div className="foil-shimmer" />}
+        {/* Foil shimmer — effect varies by finish type */}
+        {isFoil && <div className={FOIL_CLASS[card.finish] ?? 'foil-shimmer'} />}
 
         {card.quantity > 1 && (
           <span className="qty-badge">×{card.quantity}</span>
@@ -137,8 +146,12 @@ const CardTile = memo(function CardTile({ card, onRemove }) {
         <div className="card-tile-name" title={card.name}>{card.name}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <ColorPips colorIdentity={card.color_identity} />
-          {card.finish === 'etched' && <span className="finish-badge etched" title="Etched foil">E</span>}
-          {card.finish === 'foil'   && <span className="finish-badge foil"   title="Foil">✦</span>}
+          {card.finish === 'etched'       && <span className="finish-badge etched"       title="Etched foil">E</span>}
+          {card.finish === 'foil'         && <span className="finish-badge foil"         title="Foil">✦</span>}
+          {card.finish === 'rainbow-foil' && <span className="finish-badge rainbow-foil" title="Rainbow Foil">✦</span>}
+          {card.finish === 'surge-foil'   && <span className="finish-badge surge-foil"   title="Surge Foil">⚡</span>}
+          {card.finish === 'phyrexian'    && <span className="finish-badge phyrexian"    title="Phyrexian">Φ</span>}
+          {card.finish === 'oil-slick'    && <span className="finish-badge oil-slick"    title="Oil Slick">◈</span>}
         </div>
         <div className="card-tile-meta">
           {mainType && <span>{mainType}</span>}
