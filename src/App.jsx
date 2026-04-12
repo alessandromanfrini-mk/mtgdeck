@@ -117,7 +117,13 @@ export default function App() {
         <header style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <h1 style={{ margin: 0 }}>Alessandro's Library</h1>
           <p className="subtitle">Personal MTG Collection</p>
-          <div className="divider">✦ ✦ ✦</div>
+          <div className="mana-divider">
+            <div className="mana-pip mana-pip-W">W</div>
+            <div className="mana-pip mana-pip-U">U</div>
+            <div className="mana-pip mana-pip-B">B</div>
+            <div className="mana-pip mana-pip-R">R</div>
+            <div className="mana-pip mana-pip-G">G</div>
+          </div>
         </header>
 
         {/* Nav */}
