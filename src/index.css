@@ -945,12 +945,14 @@ input:focus, select:focus {
 }
 
 .db-indicator {
-  margin-left: auto;
-  font-size: 0.62rem;
+  font-size: 0.60rem;
   color: #286838;
-  padding-bottom: 0.50rem;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   font-family: 'JetBrains Mono', monospace;
+  text-align: right;
+  margin-top: 0.35rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.75;
 }
 
 /* ── Scrollbar ───────────────────────────────────────────────────────────────── */

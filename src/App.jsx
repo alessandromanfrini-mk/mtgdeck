@@ -199,10 +199,10 @@ export default function App() {
           <NavLink to="/market" className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`}>
             Market
           </NavLink>
-          {isConfigured && (
-            <span className="db-indicator">● synced</span>
-          )}
         </nav>
+        {isConfigured && (
+          <div className="db-indicator">● synced</div>
+        )}
 
         {/* Pages */}
         <Suspense fallback={<div className="loading-state"><div className="spinner" />Loading…</div>}>
