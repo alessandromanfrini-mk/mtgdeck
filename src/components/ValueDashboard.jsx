@@ -142,11 +142,6 @@ export default function ValueDashboard({ cards }) {
   const [loading, setLoading]         = useState(false)
   const [marketplace, setMarketplace] = useState('tcgplayer')
 
-  const deckNames = useMemo(
-    () => [...new Set(cards.flatMap(c => c.sources))].sort(),
-    [cards],
-  )
-
   async function handleLoad() {
     setLoading(true)
     try {
@@ -169,15 +164,6 @@ export default function ValueDashboard({ cards }) {
       .filter(c => c.finish !== 'nonFoil')
       .reduce((sum, c) => sum + cardPrice(c, priceMap, marketplace) * c.quantity, 0)
   }, [cards, priceMap, loaded, marketplace])
-
-  const perDeck = useMemo(() => {
-    if (!loaded) return []
-    return deckNames.map(name => {
-      const dc = cards.filter(c => c.sources.includes(name))
-      const value = dc.reduce((sum, c) => sum + cardPrice(c, priceMap, marketplace) * c.quantity, 0)
-      return { name, value, count: dc.reduce((s, c) => s + c.quantity, 0) }
-    }).sort((a, b) => b.value - a.value)
-  }, [cards, priceMap, loaded, deckNames, marketplace])
 
   const topCards = useMemo(() => {
     if (!loaded) return []
@@ -239,28 +225,6 @@ export default function ValueDashboard({ cards }) {
           </div>
 
           {/* Per-deck breakdown */}
-          {perDeck.length > 1 && (
-            <div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Value by Deck</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {perDeck.map(({ name, value, count }) => {
-                  const pct = totalValue > 0 ? (value / totalValue) * 100 : 0
-                  return (
-                    <div key={name}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.2rem' }}>
-                        <span>{name}</span>
-                        <span style={{ color: 'var(--gold)' }}>{fmt(value, marketplace)} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· {count} cards</span></span>
-                      </div>
-                      <div style={{ height: 5, background: 'var(--surface2)', borderRadius: 3, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: 'var(--gold)', borderRadius: 3 }} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
           {/* Top 10 cards */}
           {topCards.length > 0 && (
             <div>
