@@ -910,7 +910,7 @@ input:focus, select:focus {
   font-size: 0.80rem;
   font-weight: 600;
   letter-spacing: 0.10em;
-  color: var(--text-muted);
+  color: rgba(184, 160, 120, 0.65);
   text-decoration: none;
   background: none;
   border: none;
@@ -952,7 +952,7 @@ input:focus, select:focus {
 .nav-tab-count {
   margin-left: 0.36rem;
   font-size: 0.60rem;
-  color: var(--text-muted);
+  color: rgba(184, 160, 120, 0.50);
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -1447,8 +1447,29 @@ input:focus, select:focus {
   /* Card grid */
   .card-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 0.5rem; }
 
-  /* Top-cards grid */
-  .top-cards-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+  /* Top-cards grid — 5 columns so all 10 fit in 2 rows */
+  .top-cards-grid { grid-template-columns: repeat(5, 1fr); gap: 0.35rem; }
+
+  /* Compact overlays inside small top-card thumbnails */
+  .top-card .top-card-rank {
+    font-size: 0.52rem !important;
+    padding: 1px 4px !important;
+    border-radius: 3px !important;
+    top: 3px !important;
+    left: 3px !important;
+  }
+  .top-card .top-card-foil {
+    font-size: 0.50rem !important;
+    top: 3px !important;
+    right: 3px !important;
+  }
+  .top-card .top-card-footer {
+    padding: 0.8rem 0.25rem 0.25rem !important;
+  }
+  .top-card .top-card-price {
+    font-size: 0.52rem !important;
+  }
+  .top-card .top-card-name { display: none !important; }
 
   /* Filter bar — search takes full width */
   .filter-row { gap: 0.4rem; }
@@ -1467,7 +1488,6 @@ input:focus, select:focus {
 @media (max-width: 420px) {
   h1 { font-size: 1.7rem; }
   .card-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.4rem; }
-  .top-cards-grid { grid-template-columns: repeat(2, 1fr); }
   .nav-tab { padding: 0.45rem 0.65rem; font-size: 0.66rem; }
   .panel { padding: 0.75rem; }
 }

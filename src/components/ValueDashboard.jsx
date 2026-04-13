@@ -27,6 +27,7 @@ function TopCard({ card, rank, price }) {
 
   return (
     <div
+      className="top-card"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -55,7 +56,7 @@ function TopCard({ card, rank, price }) {
       {isFoil && <div className={FOIL_CLASS[card.finish] ?? 'foil-shimmer'} />}
 
       {/* Rank badge */}
-      <div style={{
+      <div className="top-card-rank" style={{
         position: 'absolute', top: 6, left: 6,
         background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
         borderRadius: 6, padding: '2px 7px',
@@ -67,7 +68,7 @@ function TopCard({ card, rank, price }) {
 
       {/* Foil indicator */}
       {isFoil && (
-        <div style={{
+        <div className="top-card-foil" style={{
           position: 'absolute', top: 6, right: 6,
           fontSize: '0.68rem', color: 'var(--gold-light)',
           textShadow: '0 0 6px rgba(240,200,96,0.9)',
@@ -77,13 +78,13 @@ function TopCard({ card, rank, price }) {
       )}
 
       {/* Price footer */}
-      <div style={{
+      <div className="top-card-footer" style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         background: 'linear-gradient(transparent, rgba(0,0,0,0.88))',
         padding: '1.5rem 0.5rem 0.4rem',
         textAlign: 'center',
       }}>
-        <div style={{
+        <div className="top-card-price" style={{
           fontSize: '0.78rem', fontWeight: 700,
           color: rank <= 3 ? rs.label : 'var(--gold)',
           fontVariantNumeric: 'tabular-nums',
@@ -91,7 +92,7 @@ function TopCard({ card, rank, price }) {
         }}>
           {price}
         </div>
-        <div style={{
+        <div className="top-card-name" style={{
           fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           marginTop: 1, paddingLeft: '0.25rem', paddingRight: '0.25rem',
