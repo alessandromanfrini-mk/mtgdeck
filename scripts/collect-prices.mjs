@@ -137,7 +137,7 @@ async function updateMovers(todayCards) {
   const todayMap = new Map(todayCards.map(c => [c.card_id, c]))
 
   // Fetch historical snapshots for each window
-  const windows = { '7d': 7, '30d': 30 }
+  const windows = { '7d': 7, '30d': 30, '90d': 90 }
   const histMaps = {}
 
   for (const [label, days] of Object.entries(windows)) {
