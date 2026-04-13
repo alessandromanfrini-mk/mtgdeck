@@ -42,6 +42,15 @@ export async function getTopLosers(window = '7d', limit = 50) {
   return data ?? []
 }
 
+/** Whether price_movers has any rows at all (data collected but history still accumulating). */
+export async function hasPriceData() {
+  const { count } = await supabase
+    .from('price_movers')
+    .select('card_id', { count: 'exact', head: true })
+    .not('price_now', 'is', null)
+  return (count ?? 0) > 0
+}
+
 /** Full price history for a single card (up to 90 days). */
 export async function getCardHistory(cardId) {
   const { data } = await supabase

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { getLatestBrief, getTopGainers, getTopLosers, getCardHistory } from '../lib/market.js'
+import { getLatestBrief, getTopGainers, getTopLosers, getCardHistory, hasPriceData } from '../lib/market.js'
 
 // ── SVG price chart ───────────────────────────────────────────────────────────
 
@@ -126,6 +126,7 @@ export default function MarketPage() {
   const [losers,    setLosers]    = useState([])
   const [brief,     setBrief]     = useState(null)
   const [loading,   setLoading]   = useState(true)
+  const [hasData,   setHasData]   = useState(null) // null = unknown, true/false once resolved
   const [selected,  setSelected]  = useState(null)
   const [history,   setHistory]   = useState([])
   const [histLoading, setHistLoading] = useState(false)
@@ -142,6 +143,12 @@ export default function MarketPage() {
       setLosers(l)
       setBrief(b)
       setLoading(false)
+      // If no movers, check whether price data exists at all (history still accumulating)
+      if (g.length === 0 && l.length === 0) {
+        hasPriceData().then(setHasData)
+      } else {
+        setHasData(true)
+      }
     })
   }, [window])
 
@@ -240,9 +247,11 @@ export default function MarketPage() {
       {loading ? (
         <div className="loading-state"><div className="spinner" />Loading market data…</div>
       ) : rows.length === 0 ? (
-        <div className="loading-state" style={{ padding: '3rem 1rem' }}>
-          No data yet — the daily collection job hasn't run.<br />
-          <span style={{ fontSize: '0.82rem' }}>Trigger the GitHub Actions workflow manually to populate prices.</span>
+        <div className="loading-state" style={{ padding: '3rem 1rem', textAlign: 'center' }}>
+          {hasData
+            ? <>Price history is still accumulating.<br /><span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Trend data (gainers/losers) will appear once 7 days of snapshots have been collected.</span></>
+            : <>No data yet — the daily collection job hasn't run.<br /><span style={{ fontSize: '0.82rem' }}>Trigger the GitHub Actions workflow manually to populate prices.</span></>
+          }
         </div>
       ) : (
         <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
