@@ -264,11 +264,7 @@ export default function ValueDashboard({ cards }) {
           {topCards.length > 0 && (
             <div>
               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Most Valuable Cards</div>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(5, 1fr)',
-                gap: '0.75rem',
-              }}>
+              <div className="top-cards-grid">
                 {topCards.map((c, i) => (
                   <TopCard key={c.id + ':' + c.finish} card={c} rank={i + 1} price={fmt(c._price, marketplace)} />
                 ))}

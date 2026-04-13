@@ -1397,14 +1397,77 @@ input:focus, select:focus {
   text-transform: capitalize;
 }
 
+/* ── Top-cards grid (ValueDashboard) ─────────────────────────────────────── */
+
+.top-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────────── */
+
+/* Prevent iOS auto-zoom when focusing inputs */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 1rem; /* 16px keeps iOS from zooming in */
+  }
+}
 
 @media (max-width: 700px) {
   .two-col { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 600px) {
-  .card-grid { grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); gap: 0.65rem; }
+@media (max-width: 640px) {
+  /* Masthead */
+  h1 { font-size: 2.1rem; }
+  .subtitle { font-size: 0.82rem; }
+  .app-masthead { padding: 1.25rem 0.75rem 0; margin-bottom: 1rem; }
+  .mana-divider { gap: 0.5rem; margin: 0.5rem 0 1.25rem; }
+  .mana-divider::before,
+  .mana-divider::after { width: 40px; }
+
+  /* Nav — scrollable, no indicator hiding */
+  .app-nav {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-bottom: 1.25rem;
+  }
+  .app-nav::-webkit-scrollbar { display: none; }
+  .nav-tab { padding: 0.5rem 0.85rem; font-size: 0.72rem; white-space: nowrap; }
+  .db-indicator { font-size: 0.62rem; }
+
+  /* Panels */
+  .panel { padding: 1rem; }
+
+  /* Card grid */
+  .card-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 0.5rem; }
+
+  /* Top-cards grid */
+  .top-cards-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+
+  /* Filter bar — search takes full width */
   .filter-row { gap: 0.4rem; }
-  h1 { font-size: 2.2rem; }
+  .filter-row input[type="text"] { max-width: none !important; min-width: 0; width: 100%; }
+  .type-toggle { font-size: 0.70rem; padding: 0.2rem 0.42rem; }
+
+  /* Buttons — adequate touch targets */
+  .btn { min-height: 38px; padding: 0.45rem 0.85rem; }
+  .btn-sm { min-height: 32px; }
+
+  /* Section spacing */
+  .section-divider { margin: 1rem 0; }
+  .section-gap { margin-top: 0.85rem; }
+}
+
+@media (max-width: 420px) {
+  h1 { font-size: 1.7rem; }
+  .card-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.4rem; }
+  .top-cards-grid { grid-template-columns: repeat(2, 1fr); }
+  .nav-tab { padding: 0.45rem 0.65rem; font-size: 0.66rem; }
+  .panel { padding: 0.75rem; }
 }
