@@ -62,6 +62,20 @@ export async function getCardHistory(cardId) {
   return data ?? []
 }
 
+/**
+ * Price movers for a specific set of Scryfall card IDs (for collection trends).
+ * Returns all matching rows from price_movers unsorted — sort client-side.
+ */
+export async function getCollectionMovers(scryfallIds) {
+  if (!scryfallIds.length) return []
+  const { data } = await supabase
+    .from('price_movers')
+    .select('*')
+    .in('card_id', scryfallIds)
+    .not('price_now', 'is', null)
+  return data ?? []
+}
+
 function pctCol(window) {
   return { '7d': 'pct_7d', '30d': 'pct_30d' }[window] ?? 'pct_7d'
 }

@@ -254,7 +254,7 @@ export default function App() {
                 onImport={handleSaveToCollection}
               />
             } />
-            <Route path="/market" element={<MarketPage />} />
+            <Route path="/market" element={<MarketPage collection={collection} />} />
           </Routes>
         </Suspense>
 
