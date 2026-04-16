@@ -368,6 +368,18 @@ export default function MarketPage({ collection = [] }) {
             </div>
           ) : (() => {
             const pf = `pct_${colWindow}`
+            const hasAnyPct = colMovers.some(r => r[pf] != null)
+            if (!hasAnyPct) {
+              const daysNeeded = colWindow === '7d' ? 7 : 30
+              return (
+                <div className="loading-state" style={{ padding: '2rem 1rem', textAlign: 'center' }}>
+                  Price trend data is still accumulating.<br />
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    {daysNeeded}-day trends will appear once {daysNeeded} days of snapshots have been collected.
+                  </span>
+                </div>
+              )
+            }
             const sorted = [...colMovers].filter(r => r[pf] != null).sort((a, b) => b[pf] - a[pf])
             const colRows = colDirection === 'gainers' ? sorted.filter(r => r[pf] > 0)
                           : colDirection === 'losers'  ? sorted.filter(r => r[pf] < 0).reverse()
