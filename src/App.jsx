@@ -4,7 +4,8 @@ import {
   loadCollection, saveCollection, clearCollection,
   mergeIntoCollection, removeFromCollection,
 } from './lib/storage.js'
-import { isConfigured, dbLoadCollection, dbSaveCollection, dbClearCollection, dbRemoveCard, dbAddCard } from './lib/db.js'
+import { isConfigured, dbLoadCollection, dbSaveCollection, dbClearCollection, dbRemoveCard, dbAddCard, getSession, onAuthChange, signOut } from './lib/db.js'
+import LoginScreen from './components/LoginScreen.jsx'
 
 const DecksPage      = lazy(() => import('./pages/DecksPage.jsx'))
 const CollectionPage = lazy(() => import('./pages/CollectionPage.jsx'))
@@ -25,6 +26,15 @@ async function fetchArtCrop(name, set) {
 }
 
 export default function App() {
+  // ── Auth state (null = checking, false = signed out, object = signed in) ────
+  const [session, setSession] = useState(null)
+
+  useEffect(() => {
+    if (!isConfigured) { setSession(false); return }
+    getSession().then(s => setSession(s ?? false))
+    return onAuthChange(s => setSession(s ?? false))
+  }, [])
+
   // ── Shared collection state ────────────────────────────────────────────────
   const [collection, setCollection] = useState([])
   const [colLoading, setColLoading] = useState(true)
@@ -43,7 +53,8 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (isConfigured) {
+    if (session === null) return // still checking auth
+    if (isConfigured && session) {
       dbLoadCollection()
         .then(cards => setCollection(cards ?? []))
         .catch(err => {
@@ -52,11 +63,11 @@ export default function App() {
           setCollection(loadCollection())
         })
         .finally(() => setColLoading(false))
-    } else {
+    } else if (!isConfigured) {
       setCollection(loadCollection())
       setColLoading(false)
     }
-  }, [])
+  }, [session])
 
   function showToast(msg, type = 'success') {
     setToast({ msg, type })
@@ -135,6 +146,12 @@ export default function App() {
     }
   }
 
+  // Show login screen when Supabase is configured but user is not signed in
+  if (isConfigured && session !== null && !session) return <LoginScreen />
+
+  // Show nothing while the auth check is still in flight
+  if (isConfigured && session === null) return null
+
   return (
     <BrowserRouter>
       {/* ── Full-page background — Demonic Tutor high-res art ── */}
@@ -201,7 +218,19 @@ export default function App() {
           </NavLink>
         </nav>
         {isConfigured && (
-          <div className="db-indicator">● synced</div>
+          <div className="db-indicator" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span>● synced</span>
+            <button
+              onClick={() => signOut()}
+              title="Sign out"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem', padding: 0,
+              }}
+            >
+              sign out
+            </button>
+          </div>
         )}
 
         {/* Pages */}

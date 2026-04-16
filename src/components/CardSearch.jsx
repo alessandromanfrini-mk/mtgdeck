@@ -2,13 +2,9 @@ import React, { useState, useRef, useEffect } from 'react'
 import { autocompleteCards, searchCardPrintings, getCardImage } from '../lib/scryfall.js'
 
 const FINISHES = [
-  { value: 'nonFoil',      label: 'Non-Foil' },
-  { value: 'foil',         label: 'Foil' },
-  { value: 'etched',       label: 'Etched' },
-  { value: 'rainbow-foil', label: 'Rainbow Foil' },
-  { value: 'surge-foil',   label: 'Surge Foil' },
-  { value: 'phyrexian',    label: 'Phyrexian' },
-  { value: 'oil-slick',    label: 'Oil Slick' },
+  { value: 'nonFoil', label: 'Non-Foil', scryfallKey: 'nonfoil' },
+  { value: 'foil',    label: 'Foil',     scryfallKey: 'foil'    },
+  { value: 'etched',  label: 'Etched',   scryfallKey: 'etched'  },
 ]
 
 export default function CardSearch({ onAdd }) {
@@ -92,18 +88,20 @@ export default function CardSearch({ onAdd }) {
     setQuantity(1)
   }
 
-  // Check which finishes are actually available for the selected printing.
-  // Special foil treatments (rainbow, surge, phyrexian, oil-slick) are shown
-  // whenever the card is available in foil, since Scryfall doesn't distinguish them.
+  // Scryfall provides a `finishes` array with exactly the options available for this printing.
   const availableFinishes = selectedCard
-    ? FINISHES.filter(f => {
-        if (f.value === 'nonFoil')  return selectedCard.nonfoil !== false
-        if (f.value === 'etched')   return selectedCard.finishes?.includes('etched')
-        if (f.value === 'foil')     return selectedCard.foil === true
-        // rainbow-foil, surge-foil, phyrexian, oil-slick — available if card has foil
-        return selectedCard.foil === true
-      })
+    ? FINISHES.filter(f => selectedCard.finishes?.includes(f.scryfallKey) ?? false)
     : FINISHES
+
+  // Auto-select the first available finish whenever the printing changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!selectedCard) return
+    const available = FINISHES.filter(f => selectedCard.finishes?.includes(f.scryfallKey) ?? false)
+    if (available.length > 0 && !available.some(f => f.value === finish)) {
+      setFinish(available[0].value)
+    }
+  }, [selectedCard])
 
   return (
     <div className="panel" style={{ marginBottom: '1.25rem', position: 'relative', zIndex: 10 }}>

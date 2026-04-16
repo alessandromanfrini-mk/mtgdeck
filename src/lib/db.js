@@ -3,12 +3,42 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-const supabase = (SUPABASE_URL && SUPABASE_KEY)
+export const supabase = (SUPABASE_URL && SUPABASE_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_KEY)
   : null
 
 /** True when Supabase credentials are present in the environment. */
 export const isConfigured = !!supabase
+
+// ── Auth helpers ──────────────────────────────────────────────────────────────
+
+/** Send a magic-link email. Returns { error } */
+export async function signInWithEmail(email) {
+  if (!supabase) return { error: new Error('Supabase not configured') }
+  return supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } })
+}
+
+/** Sign out the current user. */
+export async function signOut() {
+  if (!supabase) return
+  await supabase.auth.signOut()
+}
+
+/** Get the current session (null if not logged in). */
+export async function getSession() {
+  if (!supabase) return null
+  const { data } = await supabase.auth.getSession()
+  return data.session
+}
+
+/** Subscribe to auth state changes. Returns an unsubscribe function. */
+export function onAuthChange(callback) {
+  if (!supabase) return () => {}
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session)
+  })
+  return () => subscription.unsubscribe()
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
