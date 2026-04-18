@@ -32,8 +32,9 @@ const supabase  = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null
 
 const BATCH       = 500
-const MIN_PRICE   = 1.0       // skip cards under $1
+const MIN_PRICE   = 1.0       // skip cards under $1 (global market)
 const SNAP_DAYS   = 30        // rolling window
+const SF_COLL_URL = 'https://api.scryfall.com/cards/collection'
 
 // ── 1. Download bulk data ─────────────────────────────────────────────────────
 
@@ -80,6 +81,67 @@ function filterCards(raw) {
   }
 
   console.log(`[2/7] ${results.length.toLocaleString()} cards pass the $${MIN_PRICE}+ filter`)
+  return results
+}
+
+// ── 2b. Fetch prices for collection cards not already in filtered set ─────────
+
+async function fetchCollectionCards(bulkMap) {
+  console.log('[2b] Reading user collection from Supabase…')
+
+  const { data, error } = await supabase
+    .from('collection')
+    .select('card_data')
+  if (error) throw new Error(`Collection read failed: ${error.message}`)
+
+  // Extract raw Scryfall UUIDs from card_data
+  const ids = [...new Set(
+    (data ?? [])
+      .map(row => row.card_data?.id)
+      .filter(id => id && /^[0-9a-f-]{36}$/.test(id))
+  )]
+
+  const missing = ids.filter(id => !bulkMap.has(id))
+  console.log(`      ${ids.length} unique card IDs in collection, ${missing.length} not in bulk data`)
+
+  if (missing.length === 0) return []
+
+  // Scryfall /cards/collection accepts up to 75 identifiers per request
+  const SF_BATCH = 75
+  const results  = []
+
+  for (let i = 0; i < missing.length; i += SF_BATCH) {
+    const chunk = missing.slice(i, i + SF_BATCH)
+    const body  = JSON.stringify({ identifiers: chunk.map(id => ({ id })) })
+    const res   = await fetch(SF_COLL_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    })
+    if (!res.ok) {
+      console.warn(`      Scryfall collection fetch failed for chunk ${i}: ${res.status}`)
+      continue
+    }
+    const json = await res.json()
+    for (const c of json.data ?? []) {
+      if (c.digital) continue
+      const price = parseFloat(c.prices?.usd ?? 0) || parseFloat(c.prices?.usd_foil ?? 0) || 0
+      results.push({
+        card_id:          c.id,
+        name:             c.name,
+        set_code:         c.set,
+        set_name:         c.set_name,
+        collector_number: c.collector_number,
+        image_url:        c.image_uris?.small ?? c.card_faces?.[0]?.image_uris?.small ?? null,
+        price_usd:        parseFloat(c.prices?.usd ?? 0) || 0,
+        price_foil:       parseFloat(c.prices?.usd_foil ?? 0) || null,
+      })
+    }
+    // Be polite to Scryfall's rate limit
+    if (i + SF_BATCH < missing.length) await new Promise(r => setTimeout(r, 120))
+  }
+
+  console.log(`      Fetched ${results.length} collection cards from Scryfall API`)
   return results
 }
 
@@ -254,11 +316,14 @@ async function main() {
   console.log('=== Alessandro\'s Library — Price Collector ===')
   console.log(`Started: ${new Date().toISOString()}\n`)
 
-  const raw       = await fetchBulkCards()
-  const filtered  = filterCards(raw)
-  await upsertSnapshots(filtered)
+  const raw          = await fetchBulkCards()
+  const filtered     = filterCards(raw)
+  const bulkMap      = new Map(filtered.map(c => [c.card_id, c]))
+  const collCards    = await fetchCollectionCards(bulkMap)
+  const allCards     = collCards.length ? [...filtered, ...collCards] : filtered
+  await upsertSnapshots(allCards)
   await pruneOldSnapshots()
-  const movers    = await updateMovers(filtered)
+  const movers    = await updateMovers(allCards)
   await generateBrief(movers)
 
   console.log(`\nDone: ${new Date().toISOString()}`)
