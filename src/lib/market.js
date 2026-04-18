@@ -72,7 +72,6 @@ export async function getCollectionMovers(scryfallIds) {
     .from('price_movers')
     .select('*')
     .in('card_id', scryfallIds)
-    .not('price_now', 'is', null)
   return data ?? []
 }
 

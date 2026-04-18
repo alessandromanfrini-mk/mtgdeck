@@ -327,9 +327,11 @@ export default function MarketPage({ collection = [] }) {
   useEffect(() => {
     if (collection.length === 0) return
     const ids = [...new Set(collection.map(c => c.id).filter(id => UUID_RE.test(id)))]
-    if (ids.length === 0) return
+    console.debug('[CollectionTrends] collection cards:', collection.length, '| valid UUIDs:', ids.length, '| sample:', ids.slice(0, 3))
+    if (ids.length === 0) { console.warn('[CollectionTrends] No valid UUIDs in collection'); return }
     setColLoading(true)
     getCollectionMovers(ids).then(rows => {
+      console.debug('[CollectionTrends] price_movers rows returned:', rows.length, rows.slice(0, 2))
       // Attach quantity from collection so we can show value impact
       const qtyMap = new Map(collection.map(c => [c.id, (c.quantity ?? 1)]))
       setColMovers(rows.map(r => ({ ...r, quantity: qtyMap.get(r.card_id) ?? 1 })))
