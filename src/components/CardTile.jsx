@@ -144,7 +144,7 @@ const CardTile = memo(function CardTile({ card, onRemove }) {
 
       <div className="card-tile-info">
         <div className="card-tile-name" title={card.name}>{card.name}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.1rem' }}>
           <ColorPips colorIdentity={card.color_identity} />
           {card.finish === 'etched'       && <span className="finish-badge etched"       title="Etched foil">E</span>}
           {card.finish === 'foil'         && <span className="finish-badge foil"         title="Foil">✦</span>}
@@ -152,11 +152,30 @@ const CardTile = memo(function CardTile({ card, onRemove }) {
           {card.finish === 'surge-foil'   && <span className="finish-badge surge-foil"   title="Surge Foil">⚡</span>}
           {card.finish === 'phyrexian'    && <span className="finish-badge phyrexian"    title="Phyrexian">Φ</span>}
           {card.finish === 'oil-slick'    && <span className="finish-badge oil-slick"    title="Oil Slick">◈</span>}
+          {card.rarity && (
+            <span style={{
+              fontSize: '0.58rem', fontFamily: "'JetBrains Mono', monospace",
+              color: RARITY_COLOR[card.rarity] ?? '#888',
+              fontWeight: 700, letterSpacing: '0.04em', marginLeft: 'auto',
+            }}>
+              {card.rarity === 'mythic' ? 'M' : card.rarity === 'rare' ? 'R' : card.rarity === 'uncommon' ? 'U' : 'C'}
+            </span>
+          )}
         </div>
         <div className="card-tile-meta">
-          {mainType && <span>{mainType}</span>}
+          {mainType && <span style={{ fontSize: '0.65rem' }}>{mainType}</span>}
           {card.cmc > 0 && <span className="card-tile-cmc">{card.cmc}</span>}
         </div>
+        {(() => {
+          const p = card.prices
+          if (!p) return null
+          const raw = card.finish === 'foil'   ? (p.usd_foil   ?? p.usd)
+                    : card.finish === 'etched' ? (p.usd_etched ?? p.usd_foil ?? p.usd)
+                    : p.usd
+          const val = parseFloat(raw)
+          if (!val) return null
+          return <span className="card-tile-price">${val.toFixed(2)}</span>
+        })()}
       </div>
     </div>
   )

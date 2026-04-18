@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { getLatestBrief, getTopGainers, getTopLosers, getCardHistory, hasPriceData, getCollectionMovers } from '../lib/market.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -69,48 +70,193 @@ function PctBadge({ value }) {
   )
 }
 
-// ── Mover row ─────────────────────────────────────────────────────────────────
+// ── Rarity colours ────────────────────────────────────────────────────────────
 
-function MoverRow({ card, pctField, selected, onSelect }) {
-  const pct = card[pctField]
+const RARITY_CLR = { mythic: '#E07030', rare: '#B89228', uncommon: '#7AAABB', common: '#888' }
+
+// ── Card hover preview (portal) ───────────────────────────────────────────────
+
+function CardHoverPreview({ card, x, y }) {
+  const left = x + 248 > window.innerWidth ? x - 234 : x + 18
+  const top  = Math.min(y - 40, window.innerHeight - 380)
+
+  return createPortal(
+    <div style={{
+      position: 'fixed', left, top, zIndex: 9999,
+      pointerEvents: 'none',
+      animation: 'fadeInUp 0.15s ease',
+    }}>
+      <div style={{
+        background: 'rgba(8,6,16,0.97)',
+        border: '1px solid rgba(168,140,100,0.28)',
+        borderRadius: 14,
+        overflow: 'hidden',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.92), 0 0 0 1px rgba(168,180,204,0.12)',
+        width: 216,
+      }}>
+        <img
+          src={card.image_url}
+          alt={card.name}
+          style={{ width: '100%', display: 'block' }}
+        />
+        <div style={{ padding: '0.65rem 0.8rem 0.75rem' }}>
+          {card.set_name && (
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontStyle: 'italic', fontFamily: "'Lora', Georgia, serif", marginBottom: '0.45rem' }}>
+              {card.set_name}{card.collector_number ? ` · #${card.collector_number}` : ''}
+            </div>
+          )}
+          {card.type_line && (
+            <div style={{ fontSize: '0.66rem', color: 'rgba(200,185,155,0.7)', fontFamily: "'Lora', Georgia, serif", marginBottom: '0.45rem' }}>
+              {card.type_line}
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '1.05rem', fontFamily: "'JetBrains Mono', monospace", color: 'var(--gold)', fontWeight: 700 }}>
+              ${parseFloat(card.price_now).toFixed(2)}
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace" }}>7d</span>
+                <PctBadge value={card.pct_7d} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace" }}>30d</span>
+                <PctBadge value={card.pct_30d} />
+              </div>
+            </div>
+          </div>
+          {card.rarity && (
+            <div style={{ marginTop: '0.4rem', fontSize: '0.62rem', fontFamily: "'JetBrains Mono', monospace", color: RARITY_CLR[card.rarity] ?? '#888', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              {card.rarity}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
+// ── Mover card ────────────────────────────────────────────────────────────────
+
+const IMG_H = 88
+const IMG_W = Math.round(IMG_H * 5 / 7)
+
+const RARITY_BG = {
+  mythic:   'rgba(224,112,48,0.15)',
+  rare:     'rgba(184,146,40,0.15)',
+  uncommon: 'rgba(122,170,187,0.15)',
+  common:   'rgba(136,136,136,0.10)',
+}
+
+function RarityPill({ rarity }) {
+  if (!rarity) return null
+  return (
+    <span style={{
+      fontSize: '0.58rem', fontFamily: "'JetBrains Mono', monospace",
+      fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
+      color: RARITY_CLR[rarity] ?? '#888',
+      background: RARITY_BG[rarity] ?? 'transparent',
+      border: `1px solid ${RARITY_CLR[rarity] ?? '#888'}44`,
+      borderRadius: 3, padding: '0.08rem 0.3rem',
+    }}>
+      {rarity}
+    </span>
+  )
+}
+
+function MoverCard({ card, selected, onSelect, quantity }) {
+  const [hover, setHover]       = useState(false)
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+
+  function handleMouseEnter(e) { setHover(true);  setMousePos({ x: e.clientX, y: e.clientY }) }
+  function handleMouseMove(e)  { setMousePos({ x: e.clientX, y: e.clientY }) }
+  function handleMouseLeave()  { setHover(false) }
+
+  const priceNow = parseFloat(card.price_now)
+
   return (
     <div
       onClick={() => onSelect(selected ? null : card)}
+      onMouseEnter={handleMouseEnter}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       style={{
-        display: 'flex', alignItems: 'center', gap: '0.75rem',
-        padding: '0.45rem 0.75rem',
+        display: 'flex', alignItems: 'center', gap: '0.9rem',
+        padding: '0.7rem 1rem',
         borderBottom: '1px solid var(--border)',
         cursor: 'pointer',
-        background: selected ? 'rgba(168,180,204,0.07)' : 'transparent',
-        transition: 'background 0.12s',
+        background: selected ? 'rgba(168,180,204,0.09)' : hover ? 'rgba(255,255,255,0.025)' : 'transparent',
+        transition: 'background 0.1s',
       }}
-      onMouseEnter={e => { if (!selected) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
-      onMouseLeave={e => { if (!selected) e.currentTarget.style.background = 'transparent' }}
     >
+      {hover && card.image_url && <CardHoverPreview card={card} x={mousePos.x} y={mousePos.y} />}
+
       {/* Thumbnail */}
       {card.image_url
-        ? <img src={card.image_url} alt={card.name} style={{ height: 38, borderRadius: 4, flexShrink: 0 }} />
-        : <div style={{ width: 28, height: 38, background: 'var(--surface2)', borderRadius: 4, flexShrink: 0 }} />
+        ? <img src={card.image_url} alt={card.name} style={{ height: IMG_H, width: IMG_W, objectFit: 'cover', borderRadius: 6, flexShrink: 0, boxShadow: '0 4px 14px rgba(0,0,0,0.55)' }} />
+        : <div style={{ width: IMG_W, height: IMG_H, background: 'var(--surface2)', borderRadius: 6, flexShrink: 0 }} />
       }
 
-      {/* Name + set */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Lora', Georgia, serif" }}>
+      {/* ── Centre: card identity ── */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.28rem' }}>
+
+        {/* Name */}
+        <div style={{ fontSize: '0.92rem', fontWeight: 600, fontFamily: "'Lora', Georgia, serif", color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {card.name}
         </div>
-        <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.04em' }}>
-          {card.set_code?.toUpperCase()}{card.collector_number ? ` · ${card.collector_number}` : ''}
+
+        {/* Set name */}
+        {card.set_name && (
+          <div style={{ fontSize: '0.70rem', fontStyle: 'italic', fontFamily: "'Lora', Georgia, serif", color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {card.set_name}
+          </div>
+        )}
+
+        {/* Set code · collector number · rarity pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+          <span style={{ fontSize: '0.61rem', fontFamily: "'JetBrains Mono', monospace", color: 'rgba(180,160,120,0.45)', letterSpacing: '0.04em' }}>
+            {card.set_code?.toUpperCase()}{card.collector_number ? ` · #${card.collector_number}` : ''}
+          </span>
+          <RarityPill rarity={card.rarity} />
         </div>
+
+        {/* Type line — only if present */}
+        {card.type_line && (
+          <div style={{ fontSize: '0.63rem', fontFamily: "'Lora', Georgia, serif", color: 'rgba(200,185,155,0.50)', lineHeight: 1.3 }}>
+            {card.type_line}
+          </div>
+        )}
       </div>
 
-      {/* Price */}
-      <span style={{ fontSize: '0.85rem', fontFamily: "'JetBrains Mono', monospace", color: 'var(--silver)', flexShrink: 0 }}>
-        ${parseFloat(card.price_now).toFixed(2)}
-      </span>
+      {/* ── Thin divider ── */}
+      <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', flexShrink: 0, margin: '0.1rem 0' }} />
 
-      {/* % change */}
-      <div style={{ flexShrink: 0, minWidth: 68, textAlign: 'right' }}>
-        <PctBadge value={pct} />
+      {/* ── Right: price + % changes ── */}
+      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', minWidth: 110 }}>
+
+        {/* Price block */}
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '0.1rem' }}>
+            Price
+          </div>
+          <div style={{ fontSize: '1.0rem', fontFamily: "'JetBrains Mono', monospace", color: 'var(--silver)', fontWeight: 700, lineHeight: 1 }}>
+            ${priceNow.toFixed(2)}
+          </div>
+          {quantity > 1 && (
+            <div style={{ fontSize: '0.63rem', color: 'var(--text-muted)', marginTop: '0.18rem', fontFamily: "'JetBrains Mono', monospace" }}>
+              ×{quantity} = <span style={{ color: 'var(--gold)', fontWeight: 600 }}>${(priceNow * quantity).toFixed(2)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* % change rows — aligned with a mini grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr', rowGap: '0.25rem', columnGap: '0.4rem', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.60rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace", textAlign: 'right' }}>7d</span>
+          <PctBadge value={card.pct_7d} />
+          <span style={{ fontSize: '0.60rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace", textAlign: 'right' }}>30d</span>
+          <PctBadge value={card.pct_30d} />
+        </div>
       </div>
     </div>
   )
@@ -122,8 +268,10 @@ const WINDOWS    = ['7d', '30d']
 const DIRECTIONS = ['all', 'gainers', 'losers']
 
 export default function MarketPage({ collection = [] }) {
+  const [expanded,  setExpanded]  = useState(false)
   const [window,    setWindow]    = useState('7d')
   const [direction, setDirection] = useState('all')
+  const [sort,      setSort]      = useState('desc')
   const [gainers,   setGainers]   = useState([])
   const [losers,    setLosers]    = useState([])
   const [brief,     setBrief]     = useState(null)
@@ -134,10 +282,12 @@ export default function MarketPage({ collection = [] }) {
   const [histLoading, setHistLoading] = useState(false)
 
   // ── Collection trends state ───────────────────────────────────────────────
+  const [colExpanded,  setColExpanded]  = useState(false)
   const [colMovers,    setColMovers]    = useState([])
   const [colLoading,   setColLoading]   = useState(false)
   const [colWindow,    setColWindow]    = useState('7d')
   const [colDirection, setColDirection] = useState('all')
+  const [colSort,      setColSort]      = useState('desc')
   const [colSelected,  setColSelected]  = useState(null)
   const [colHistory,   setColHistory]   = useState([])
   const [colHistLoading, setColHistLoading] = useState(false)
@@ -199,10 +349,16 @@ export default function MarketPage({ collection = [] }) {
 
   const pctField = { '7d': 'pct_7d', '30d': 'pct_30d' }[window]
 
-  // Build display list based on direction
-  const rows = direction === 'gainers' ? gainers
-             : direction === 'losers'  ? losers
-             : [...gainers, ...losers].sort((a, b) => Math.abs(b[pctField] ?? 0) - Math.abs(a[pctField] ?? 0))
+  const rows = (() => {
+    const base = direction === 'gainers' ? [...gainers]
+               : direction === 'losers'  ? [...losers]
+               : [...gainers, ...losers]
+    return base.sort((a, b) =>
+      sort === 'desc'
+        ? (b[pctField] ?? 0) - (a[pctField] ?? 0)
+        : (a[pctField] ?? 0) - (b[pctField] ?? 0)
+    )
+  })()
 
   return (
     <div className="page-enter">
@@ -215,26 +371,53 @@ export default function MarketPage({ collection = [] }) {
         }}>
           Market Trends
         </h2>
-        {brief?.created_at && (
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.3rem 0 0', fontStyle: 'italic' }}>
-            Last updated: {new Date(brief.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </p>
-        )}
       </div>
 
       {/* AI brief */}
       {brief?.brief && (
-        <div className="panel" style={{ marginBottom: '1.25rem' }}>
-          <div className="panel-title">AI Market Brief</div>
-          <p style={{ fontSize: '0.88rem', lineHeight: 1.75, color: 'var(--text-main)', margin: 0, fontStyle: 'italic', fontFamily: "'Lora', Georgia, serif" }}>
-            "{brief.brief}"
-          </p>
+        <div className="panel" style={{ marginBottom: '1.25rem', position: 'relative', overflow: 'hidden' }}>
+          {/* Panel header row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
+            <div className="panel-title" style={{ margin: 0 }}>Market Brief</div>
+            {brief.created_at && (
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.04em' }}>
+                {new Date(brief.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
+            )}
+          </div>
+
+          {/* Decorative opening quote */}
+          <div style={{
+            position: 'absolute', top: '0.5rem', right: '1rem',
+            fontSize: '5rem', lineHeight: 1, color: 'rgba(184,146,40,0.07)',
+            fontFamily: 'Georgia, serif', pointerEvents: 'none', userSelect: 'none',
+          }}>
+            "
+          </div>
+
+          {/* Sentences as individual lines */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            {brief.brief
+              .replace(/([.!?])\s+(?=[A-Z])/g, '$1\n')
+              .split('\n')
+              .map(s => s.trim())
+              .filter(Boolean)
+              .map((sentence, i) => (
+                <div key={i} style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start' }}>
+                  <span style={{ color: 'var(--gold)', fontSize: '0.55rem', marginTop: '0.35rem', flexShrink: 0, opacity: 0.7 }}>✦</span>
+                  <span style={{ fontSize: '0.87rem', lineHeight: 1.65, color: 'var(--text-main)', fontFamily: "'Lora', Georgia, serif" }}>
+                    {sentence}
+                  </span>
+                </div>
+              ))
+            }
+          </div>
         </div>
       )}
 
       {!brief && !loading && (
         <div className="panel" style={{ marginBottom: '1.25rem' }}>
-          <div className="panel-title">AI Market Brief</div>
+          <div className="panel-title">Market Brief</div>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>
             No brief yet — the daily job hasn't run. Trigger it manually from GitHub Actions to populate data.
           </p>
@@ -243,63 +426,83 @@ export default function MarketPage({ collection = [] }) {
 
       <div className="section-divider"><span>✦</span></div>
 
-      {/* Controls */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center' }}>
-        {/* Window */}
-        <div style={{ display: 'flex', gap: '0.3rem' }}>
-          {WINDOWS.map(w => (
-            <button
-              key={w}
-              className={`btn btn-sm${window === w ? ' btn-primary' : ''}`}
-              onClick={() => setWindow(w)}
-            >
-              {w}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 0.25rem' }} />
-
-        {/* Direction */}
-        <div style={{ display: 'flex', gap: '0.3rem' }}>
-          {DIRECTIONS.map(d => (
-            <button
-              key={d}
-              className={`btn btn-sm${direction === d ? ' btn-primary' : ''}`}
-              onClick={() => setDirection(d)}
-            >
-              {d === 'gainers' ? '▲ Gainers' : d === 'losers' ? '▼ Losers' : 'All'}
-            </button>
-          ))}
-        </div>
-
-        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          {rows.length} cards
+      {/* ── Market Trends toggle header ── */}
+      <button
+        onClick={() => setExpanded(e => !e)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '0.75rem',
+          width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+          padding: '0.25rem 0', marginBottom: expanded ? '1rem' : '0', textAlign: 'left',
+        }}
+      >
+        <span style={{
+          fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '1.0rem', fontWeight: 600,
+          color: 'var(--silver)', letterSpacing: '0.12em', textTransform: 'uppercase',
+        }}>
+          Price Movers
         </span>
-      </div>
+        {!loading && rows.length > 0 && (
+          <span style={{ fontSize: '0.70rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+            {rows.length} cards
+          </span>
+        )}
+        <span style={{
+          marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '0.70rem',
+          transition: 'transform 0.22s ease',
+          transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+          display: 'inline-block',
+        }}>
+          ▼
+        </span>
+      </button>
 
-      {/* Movers table */}
-      {loading ? (
-        <div className="loading-state"><div className="spinner" />Loading market data…</div>
-      ) : rows.length === 0 ? (
-        <div className="loading-state" style={{ padding: '3rem 1rem', textAlign: 'center' }}>
-          {hasData
-            ? <>Price history is still accumulating.<br /><span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Trend data (gainers/losers) will appear once 7 days of snapshots have been collected.</span></>
-            : <>No data yet — the daily collection job hasn't run.<br /><span style={{ fontSize: '0.82rem' }}>Trigger the GitHub Actions workflow manually to populate prices.</span></>
-          }
-        </div>
-      ) : (
-        <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-          {rows.map(card => (
-            <MoverRow
-              key={card.card_id}
-              card={card}
-              pctField={pctField}
-              selected={selected?.card_id === card.card_id}
-              onSelect={setSelected}
-            />
-          ))}
-        </div>
+      {expanded && (
+        <>
+          {/* Controls */}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '0.3rem' }}>
+              {WINDOWS.map(w => (
+                <button key={w} className={`btn btn-sm${window === w ? ' btn-primary' : ''}`} onClick={() => setWindow(w)}>{w}</button>
+              ))}
+            </div>
+            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 0.25rem' }} />
+            <div style={{ display: 'flex', gap: '0.3rem' }}>
+              {DIRECTIONS.map(d => (
+                <button key={d} className={`btn btn-sm${direction === d ? ' btn-primary' : ''}`} onClick={() => setDirection(d)}>
+                  {d === 'gainers' ? '▲ Gainers' : d === 'losers' ? '▼ Losers' : 'All'}
+                </button>
+              ))}
+            </div>
+            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 0.25rem' }} />
+            <div style={{ display: 'flex', gap: '0.3rem' }}>
+              <button className={`btn btn-sm${sort === 'desc' ? ' btn-primary' : ''}`} onClick={() => setSort('desc')} title="Highest % first">% ▼</button>
+              <button className={`btn btn-sm${sort === 'asc'  ? ' btn-primary' : ''}`} onClick={() => setSort('asc')}  title="Lowest % first">% ▲</button>
+            </div>
+          </div>
+
+          {/* Movers list */}
+          {loading ? (
+            <div className="loading-state"><div className="spinner" />Loading market data…</div>
+          ) : rows.length === 0 ? (
+            <div className="loading-state" style={{ padding: '3rem 1rem', textAlign: 'center' }}>
+              {hasData
+                ? <>Price history is still accumulating.<br /><span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Trend data will appear once 7 days of snapshots have been collected.</span></>
+                : <>No data yet — the daily collection job hasn't run.<br /><span style={{ fontSize: '0.82rem' }}>Trigger the GitHub Actions workflow manually to populate prices.</span></>
+              }
+            </div>
+          ) : (
+            <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+              {rows.map(card => (
+                <MoverCard
+                  key={card.card_id}
+                  card={card}
+                  selected={selected?.card_id === card.card_id}
+                  onSelect={setSelected}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* ── My Collection Trends ─────────────────────────────────────────── */}
@@ -307,131 +510,121 @@ export default function MarketPage({ collection = [] }) {
         <>
           <div className="section-divider"><span>✦</span></div>
 
-          <div style={{ marginBottom: '1.5rem' }}>
-            <h2 style={{
-              fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '1.1rem', fontWeight: 600,
-              color: 'var(--silver)', letterSpacing: '0.14em', margin: 0, textTransform: 'uppercase',
-            }}>
-              My Collection Trends
-            </h2>
-            {colMovers.length > 0 && (() => {
-              const pf = `pct_${colWindow}`
-              const totalNow  = colMovers.reduce((s, r) => s + parseFloat(r.price_now) * r.quantity, 0)
-              const totalThen = colMovers.reduce((s, r) => {
-                const pct = r[pf]
-                if (pct == null) return s
-                return s + (parseFloat(r.price_now) / (1 + pct / 100)) * r.quantity
-              }, 0)
-              const overallPct = totalThen > 0 ? ((totalNow - totalThen) / totalThen) * 100 : null
-              const up = overallPct >= 0
-              return overallPct != null ? (
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.3rem 0 0' }}>
-                  Tracked cards ({colWindow}):&nbsp;
-                  <span style={{ color: up ? '#4a9a4a' : '#C8482A', fontWeight: 600 }}>
+          {/* ── Collection Trends toggle header ── */}
+          {(() => {
+            const pf = `pct_${colWindow}`
+            const totalNow  = colMovers.reduce((s, r) => s + parseFloat(r.price_now) * r.quantity, 0)
+            const totalThen = colMovers.reduce((s, r) => {
+              const pct = r[pf]; if (pct == null) return s
+              return s + (parseFloat(r.price_now) / (1 + pct / 100)) * r.quantity
+            }, 0)
+            const overallPct = totalThen > 0 ? ((totalNow - totalThen) / totalThen) * 100 : null
+            const up = overallPct != null && overallPct >= 0
+            return (
+              <button
+                onClick={() => setColExpanded(e => !e)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                  padding: '0.25rem 0', marginBottom: colExpanded ? '1rem' : '0', textAlign: 'left',
+                }}
+              >
+                <span style={{
+                  fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '1.0rem', fontWeight: 600,
+                  color: 'var(--silver)', letterSpacing: '0.12em', textTransform: 'uppercase',
+                }}>
+                  My Collection Trends
+                </span>
+                {overallPct != null && (
+                  <span style={{ fontSize: '0.70rem', fontFamily: "'JetBrains Mono', monospace", color: up ? '#4a9a4a' : '#C8482A', fontWeight: 700 }}>
                     {up ? '▲' : '▼'} {Math.abs(overallPct).toFixed(1)}%
                   </span>
-                  <span style={{ marginLeft: '0.4rem' }}>
-                    (${totalThen.toFixed(0)} → ${totalNow.toFixed(0)})
+                )}
+                {!colLoading && colMovers.length > 0 && (
+                  <span style={{ fontSize: '0.70rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    {colMovers.length} / {collection.length} tracked
                   </span>
-                </p>
-              ) : null
-            })()}
-          </div>
-
-          {/* Controls */}
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: '0.3rem' }}>
-              {WINDOWS.map(w => (
-                <button key={w} className={`btn btn-sm${colWindow === w ? ' btn-primary' : ''}`} onClick={() => setColWindow(w)}>{w}</button>
-              ))}
-            </div>
-            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 0.25rem' }} />
-            <div style={{ display: 'flex', gap: '0.3rem' }}>
-              {DIRECTIONS.map(d => (
-                <button key={d} className={`btn btn-sm${colDirection === d ? ' btn-primary' : ''}`} onClick={() => setColDirection(d)}>
-                  {d === 'gainers' ? '▲ Gainers' : d === 'losers' ? '▼ Losers' : 'All'}
-                </button>
-              ))}
-            </div>
-            {!colLoading && colMovers.length > 0 && (
-              <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                {colMovers.length} / {collection.length} cards tracked
-              </span>
-            )}
-          </div>
-
-          {colLoading ? (
-            <div className="loading-state"><div className="spinner" />Loading collection trends…</div>
-          ) : colMovers.length === 0 ? (
-            <div className="loading-state" style={{ padding: '2rem 1rem' }}>
-              No price data yet for your collection cards.
-            </div>
-          ) : (() => {
-            const pf = `pct_${colWindow}`
-            const hasAnyPct = colMovers.some(r => r[pf] != null)
-            if (!hasAnyPct) {
-              const daysNeeded = colWindow === '7d' ? 7 : 30
-              return (
-                <div className="loading-state" style={{ padding: '2rem 1rem', textAlign: 'center' }}>
-                  Price trend data is still accumulating.<br />
-                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                    {daysNeeded}-day trends will appear once {daysNeeded} days of snapshots have been collected.
-                  </span>
-                </div>
-              )
-            }
-            const sorted = [...colMovers].filter(r => r[pf] != null).sort((a, b) => b[pf] - a[pf])
-            const colRows = colDirection === 'gainers' ? sorted.filter(r => r[pf] > 0)
-                          : colDirection === 'losers'  ? sorted.filter(r => r[pf] < 0).reverse()
-                          : sorted
-            return (
-              <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-                {colRows.map(card => (
-                  <div
-                    key={card.card_id}
-                    onClick={() => setColSelected(colSelected?.card_id === card.card_id ? null : card)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '0.75rem',
-                      padding: '0.45rem 0.75rem',
-                      borderBottom: '1px solid var(--border)',
-                      cursor: 'pointer',
-                      background: colSelected?.card_id === card.card_id ? 'rgba(168,180,204,0.07)' : 'transparent',
-                      transition: 'background 0.12s',
-                    }}
-                    onMouseEnter={e => { if (colSelected?.card_id !== card.card_id) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
-                    onMouseLeave={e => { if (colSelected?.card_id !== card.card_id) e.currentTarget.style.background = 'transparent' }}
-                  >
-                    {card.image_url
-                      ? <img src={card.image_url} alt={card.name} style={{ height: 38, borderRadius: 4, flexShrink: 0 }} />
-                      : <div style={{ width: 28, height: 38, background: 'var(--surface2)', borderRadius: 4, flexShrink: 0 }} />
-                    }
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Lora', Georgia, serif" }}>
-                        {card.name}
-                      </div>
-                      <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.04em' }}>
-                        {card.set_code?.toUpperCase()}{card.collector_number ? ` · ${card.collector_number}` : ''}{card.quantity > 1 ? ` · ×${card.quantity}` : ''}
-                      </div>
-                    </div>
-                    <span style={{ fontSize: '0.85rem', fontFamily: "'JetBrains Mono', monospace", color: 'var(--silver)', flexShrink: 0 }}>
-                      ${parseFloat(card.price_now).toFixed(2)}
-                      {card.quantity > 1 && (
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '0.3rem' }}>
-                          (${(parseFloat(card.price_now) * card.quantity).toFixed(2)})
-                        </span>
-                      )}
-                    </span>
-                    <div style={{ flexShrink: 0, minWidth: 68, textAlign: 'right' }}>
-                      <PctBadge value={card[pf]} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                )}
+                <span style={{
+                  marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '0.70rem',
+                  transition: 'transform 0.22s ease',
+                  transform: colExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                  display: 'inline-block',
+                }}>
+                  ▼
+                </span>
+              </button>
             )
           })()}
 
-          {/* Collection card detail chart */}
-          {colSelected && (
+          {colExpanded && (
+            <>
+              {/* Controls */}
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                  {WINDOWS.map(w => (
+                    <button key={w} className={`btn btn-sm${colWindow === w ? ' btn-primary' : ''}`} onClick={() => setColWindow(w)}>{w}</button>
+                  ))}
+                </div>
+                <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 0.25rem' }} />
+                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                  {DIRECTIONS.map(d => (
+                    <button key={d} className={`btn btn-sm${colDirection === d ? ' btn-primary' : ''}`} onClick={() => setColDirection(d)}>
+                      {d === 'gainers' ? '▲ Gainers' : d === 'losers' ? '▼ Losers' : 'All'}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 0.25rem' }} />
+                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                  <button className={`btn btn-sm${colSort === 'desc' ? ' btn-primary' : ''}`} onClick={() => setColSort('desc')} title="Highest % first">% ▼</button>
+                  <button className={`btn btn-sm${colSort === 'asc'  ? ' btn-primary' : ''}`} onClick={() => setColSort('asc')}  title="Lowest % first">% ▲</button>
+                </div>
+              </div>
+
+              {/* Movers list */}
+              {colLoading ? (
+                <div className="loading-state"><div className="spinner" />Loading collection trends…</div>
+              ) : colMovers.length === 0 ? (
+                <div className="loading-state" style={{ padding: '2rem 1rem' }}>
+                  No price data yet for your collection cards.
+                </div>
+              ) : (() => {
+                const pf = `pct_${colWindow}`
+                const hasAnyPct = colMovers.some(r => r[pf] != null)
+                if (!hasAnyPct) {
+                  const daysNeeded = colWindow === '7d' ? 7 : 30
+                  return (
+                    <div className="loading-state" style={{ padding: '2rem 1rem', textAlign: 'center' }}>
+                      Price trend data is still accumulating.<br />
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                        {daysNeeded}-day trends will appear once {daysNeeded} days of snapshots have been collected.
+                      </span>
+                    </div>
+                  )
+                }
+                const sorted = [...colMovers].filter(r => r[pf] != null).sort((a, b) =>
+                  colSort === 'desc' ? b[pf] - a[pf] : a[pf] - b[pf]
+                )
+                const colRows = colDirection === 'gainers' ? sorted.filter(r => r[pf] > 0)
+                              : colDirection === 'losers'  ? sorted.filter(r => r[pf] < 0)
+                              : sorted
+                return (
+                  <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+                    {colRows.map(card => (
+                      <MoverCard
+                        key={card.card_id}
+                        card={card}
+                        selected={colSelected?.card_id === card.card_id}
+                        onSelect={c => setColSelected(colSelected?.card_id === card.card_id ? null : c)}
+                        quantity={card.quantity}
+                      />
+                    ))}
+                  </div>
+                )
+              })()}
+
+              {/* Collection card detail chart */}
+              {colSelected && (
             <>
               <div className="section-divider"><span>✦</span></div>
               <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
@@ -477,11 +670,13 @@ export default function MarketPage({ collection = [] }) {
               </div>
             </>
           )}
+            </>
+          )}
         </>
       )}
 
       {/* Card detail chart */}
-      {selected && (
+      {expanded && selected && (
         <>
           <div className="section-divider"><span>✦</span></div>
           <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>

@@ -141,13 +141,16 @@ export default function ValueDashboard({ cards }) {
   const [loaded, setLoaded]           = useState(false)
   const [loading, setLoading]         = useState(false)
   const [marketplace, setMarketplace] = useState('tcgplayer')
+  const [collapsed, setCollapsed]     = useState(true)
 
-  async function handleLoad() {
+  async function handleLoad(e) {
+    e.stopPropagation()
     setLoading(true)
     try {
       const map = await fetchPrices(cards)
       setPriceMap(map)
       setLoaded(true)
+      setCollapsed(false)
     } finally {
       setLoading(false)
     }
@@ -178,21 +181,58 @@ export default function ValueDashboard({ cards }) {
 
   return (
     <div className="panel" style={{ marginTop: '1.5rem' }}>
-      <div className="panel-title">Collection Value</div>
 
-      {!loaded ? (
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+      {/* ── Toggle header ── */}
+      <button
+        onClick={() => setCollapsed(c => !c)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '0.75rem',
+          width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+          padding: 0, textAlign: 'left',
+          marginBottom: collapsed ? 0 : '1.25rem',
+        }}
+      >
+        <span style={{
+          fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '1.0rem', fontWeight: 600,
+          color: 'var(--silver)', letterSpacing: '0.12em', textTransform: 'uppercase',
+        }}>
+          Collection Value
+        </span>
+
+        {/* Total value badge — visible while collapsed */}
+        {loaded && totalValue != null && (
+          <span style={{
+            fontSize: '0.82rem', fontFamily: "'JetBrains Mono', monospace",
+            color: 'var(--gold)', fontWeight: 700,
+          }}>
+            {fmt(totalValue, marketplace)}
+          </span>
+        )}
+
+        {/* Inline load button — accessible without expanding */}
+        {!loaded && (
           <button
-            className="btn btn-primary"
+            className="btn btn-sm btn-primary"
             onClick={handleLoad}
             disabled={loading}
-            style={{ opacity: loading ? 0.6 : 1 }}
+            style={{ opacity: loading ? 0.6 : 1, fontSize: '0.72rem', padding: '0.2rem 0.6rem' }}
           >
-            {loading ? 'Loading prices…' : '$ Load Collection Value'}
+            {loading ? <><span className="spinner" style={{ width: 12, height: 12, display: 'inline-block', marginRight: '0.3rem', verticalAlign: 'middle' }} />Loading…</> : '$ Load Prices'}
           </button>
-          {loading && <div className="spinner" style={{ width: 18, height: 18, margin: 0 }} />}
-        </div>
-      ) : (
+        )}
+
+        <span style={{
+          marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '0.70rem',
+          transition: 'transform 0.22s ease',
+          transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)',
+          display: 'inline-block',
+        }}>
+          ▼
+        </span>
+      </button>
+
+      {/* ── Expanded body ── */}
+      {!collapsed && loaded && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
           {/* Marketplace selector */}
@@ -224,8 +264,7 @@ export default function ValueDashboard({ cards }) {
             ))}
           </div>
 
-          {/* Per-deck breakdown */}
-          {/* Top 10 cards */}
+          {/* Top 10 most valuable cards */}
           {topCards.length > 0 && (
             <div>
               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Most Valuable Cards</div>
@@ -239,6 +278,14 @@ export default function ValueDashboard({ cards }) {
 
         </div>
       )}
+
+      {/* Not-yet-loaded expanded state — just a hint */}
+      {!collapsed && !loaded && (
+        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic', paddingTop: '0.25rem' }}>
+          Click <strong style={{ color: 'var(--gold)' }}>$ Load Prices</strong> above to fetch current market values for your collection.
+        </div>
+      )}
+
     </div>
   )
 }

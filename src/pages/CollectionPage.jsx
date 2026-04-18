@@ -12,10 +12,11 @@ export default function CollectionPage({
   collection, colLoading, colError,
   onAddCard, onRemoveCard, onClearCollection, onImport,
 }) {
-  const [filters, setFilters]   = useState(DEFAULT_FILTERS)
-  const [view, setView]         = useState('gallery')
-  const [drawerOpen, setDrawer] = useState(false)
-  const [addTab, setAddTab]     = useState('single')
+  const [filters, setFilters]       = useState(DEFAULT_FILTERS)
+  const [view, setView]             = useState('gallery')
+  const [drawerOpen, setDrawer]     = useState(false)
+  const [addTab, setAddTab]         = useState('single')
+  const [cardsExpanded, setCardsExpanded] = useState(false)
 
   const total = useMemo(() => collection.reduce((s, c) => s + c.quantity, 0), [collection])
 
@@ -85,22 +86,52 @@ export default function CollectionPage({
         <>
           <div className="section-divider"><span>✦</span></div>
 
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          {/* ── Cards toggle header ── */}
+          <button
+            onClick={() => setCardsExpanded(e => !e)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.75rem',
+              width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+              padding: '0.25rem 0', marginBottom: cardsExpanded ? '1rem' : '1.5rem', textAlign: 'left',
+            }}
+          >
+            <span style={{
+              fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '1.0rem', fontWeight: 600,
+              color: 'var(--silver)', letterSpacing: '0.12em', textTransform: 'uppercase',
+            }}>
+              Cards
+            </span>
+            <span style={{ fontSize: '0.70rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace" }}>
               {collection.length} unique · {total} total
             </span>
-            <button className="btn btn-sm btn-danger" style={{ marginLeft: 'auto' }} onClick={onClearCollection}>
-              Clear Collection
+            <button
+              className="btn btn-sm btn-danger"
+              style={{ marginLeft: 'auto', fontSize: '0.68rem', padding: '0.18rem 0.55rem' }}
+              onClick={e => { e.stopPropagation(); onClearCollection() }}
+            >
+              Clear
             </button>
-          </div>
+            <span style={{
+              color: 'var(--text-muted)', fontSize: '0.70rem',
+              transition: 'transform 0.22s ease',
+              transform: cardsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              display: 'inline-block',
+            }}>
+              ▼
+            </span>
+          </button>
 
-          <FilterBar filters={filters} onFiltersChange={setFilters} total={total} unique={collection.length} />
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-            <button className={`btn btn-sm${view === 'gallery' ? ' btn-primary' : ''}`} onClick={() => setView('gallery')}>Gallery</button>
-            <button className={`btn btn-sm${view === 'binder'  ? ' btn-primary' : ''}`} onClick={() => setView('binder')}>Binder</button>
-          </div>
-          {view === 'gallery' && <CardGrid cards={collection} filters={filters} onRemove={onRemoveCard} />}
-          {view === 'binder'  && <div className="panel"><div className="panel-title">Binder View</div><BinderView cards={collection} /></div>}
+          {cardsExpanded && (
+            <>
+              <FilterBar filters={filters} onFiltersChange={setFilters} total={total} unique={collection.length} />
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                <button className={`btn btn-sm${view === 'gallery' ? ' btn-primary' : ''}`} onClick={() => setView('gallery')}>Gallery</button>
+                <button className={`btn btn-sm${view === 'binder'  ? ' btn-primary' : ''}`} onClick={() => setView('binder')}>Binder</button>
+              </div>
+              {view === 'gallery' && <CardGrid cards={collection} filters={filters} onRemove={onRemoveCard} />}
+              {view === 'binder'  && <div className="panel"><div className="panel-title">Binder View</div><BinderView cards={collection} /></div>}
+            </>
+          )}
 
           <div className="section-divider"><span>✦</span></div>
           <ValueDashboard cards={collection} />
