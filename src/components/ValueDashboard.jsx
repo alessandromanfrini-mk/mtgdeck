@@ -177,8 +177,8 @@ export default function ValueDashboard({ cards, priceMap, pricesLoaded, pricesLo
           Collection Value
         </span>
 
-        {/* Total value badge — visible while collapsed */}
-        {pricesLoaded && totalValue != null && (
+        {/* Total value badge — only visible when expanded */}
+        {pricesLoaded && !collapsed && totalValue != null && (
           <span style={{
             fontSize: '0.82rem', fontFamily: "'JetBrains Mono', monospace",
             color: 'var(--gold)', fontWeight: 700,
