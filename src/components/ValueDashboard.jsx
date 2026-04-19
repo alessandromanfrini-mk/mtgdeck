@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 
 const FOIL_CLASS = {
   foil:           'foil-shimmer',
@@ -133,11 +133,6 @@ function fmt(value, marketplace) {
 export default function ValueDashboard({ cards, priceMap, pricesLoaded, pricesLoading, onLoadPrices }) {
   const [marketplace, setMarketplace] = useState('tcgplayer')
   const [collapsed,   setCollapsed]   = useState(true)
-
-  // Auto-expand when prices first become available
-  useEffect(() => {
-    if (pricesLoaded) setCollapsed(false)
-  }, [pricesLoaded])
 
   const totalValue = useMemo(() => {
     if (!pricesLoaded) return null

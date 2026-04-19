@@ -12,13 +12,15 @@ const COLORS = [
 const TYPES = ['Land', 'Creature', 'Artifact', 'Enchantment', 'Planeswalker', 'Instant', 'Sorcery']
 
 const SORT_OPTIONS = [
-  { value: 'name',      label: 'Name A–Z'    },
-  { value: 'cmc_asc',   label: 'CMC ↑'       },
-  { value: 'cmc_desc',  label: 'CMC ↓'       },
-  { value: 'qty_desc',  label: 'Quantity ↓'  },
-  { value: 'type',      label: 'Type'        },
-  { value: 'color',     label: 'Color'       },
-  { value: 'rarity',    label: 'Rarity'      },
+  { value: 'name',        label: 'Name A–Z'    },
+  { value: 'price_desc',  label: 'Price ↓'     },
+  { value: 'price_asc',   label: 'Price ↑'     },
+  { value: 'cmc_asc',     label: 'CMC ↑'       },
+  { value: 'cmc_desc',    label: 'CMC ↓'       },
+  { value: 'qty_desc',    label: 'Quantity ↓'  },
+  { value: 'type',        label: 'Type'        },
+  { value: 'color',       label: 'Color'       },
+  { value: 'rarity',      label: 'Rarity'      },
 ]
 
 function toggle(arr, key) {
