@@ -99,9 +99,8 @@ function TopCard({ card, rank, price }) {
 }
 
 const MARKETPLACES = [
-  { id: 'tcgplayer',  label: 'TCGPlayer',  currency: '$',   note: 'USD' },
-  { id: 'cardmarket', label: 'Cardmarket', currency: '€',   note: 'EUR' },
-  { id: 'mtgo',       label: 'MTGO',       currency: '',    note: 'tix' },
+  { id: 'tcgplayer',  label: 'TCGPlayer',  currency: '$' },
+  { id: 'cardmarket', label: 'Cardmarket', currency: '€' },
 ]
 
 function cardPrice(card, priceMap, marketplace) {
@@ -114,10 +113,6 @@ function cardPrice(card, priceMap, marketplace) {
     return parseFloat(p.eur ?? '0') || 0
   }
 
-  if (marketplace === 'mtgo') {
-    return parseFloat(p.tix ?? '0') || 0
-  }
-
   // TCGPlayer (default)
   if (card.finish === 'foil')   return parseFloat(p.usd_foil   ?? p.usd ?? '0') || 0
   if (card.finish === 'etched') return parseFloat(p.usd_etched ?? p.usd_foil ?? p.usd ?? '0') || 0
@@ -125,12 +120,11 @@ function cardPrice(card, priceMap, marketplace) {
 }
 
 function fmt(value, marketplace) {
-  const m = MARKETPLACES.find(x => x.id === marketplace)
-  if (marketplace === 'mtgo') return `${value.toFixed(1)} tix`
-  return `${m.currency}${value.toFixed(2)}`
+  const currency = MARKETPLACES.find(x => x.id === marketplace)?.currency ?? '$'
+  return `${currency}${value.toFixed(2)}`
 }
 
-export default function ValueDashboard({ cards, priceMap, pricesLoaded, pricesLoading, onLoadPrices, marketplace, onMarketplaceChange }) {
+export default function ValueDashboard({ cards, priceMap, pricesLoaded, marketplace, onMarketplaceChange }) {
   const [collapsed, setCollapsed] = useState(true)
 
   const totalValue = useMemo(() => {
@@ -184,20 +178,6 @@ export default function ValueDashboard({ cards, priceMap, pricesLoaded, pricesLo
           }}>
             {fmt(totalValue, marketplace)}
           </span>
-        )}
-
-        {/* Load button — shown when prices not yet loaded */}
-        {!pricesLoaded && (
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={e => { e.stopPropagation(); onLoadPrices() }}
-            disabled={pricesLoading}
-            style={{ opacity: pricesLoading ? 0.6 : 1, fontSize: '0.72rem', padding: '0.2rem 0.6rem' }}
-          >
-            {pricesLoading
-              ? <><span className="spinner" style={{ width: 12, height: 12, display: 'inline-block', marginRight: '0.3rem', verticalAlign: 'middle' }} />Loading…</>
-              : '$ Load Prices'}
-          </button>
         )}
 
         <span style={{
@@ -258,10 +238,9 @@ export default function ValueDashboard({ cards, priceMap, pricesLoaded, pricesLo
         </div>
       )}
 
-      {/* Not-yet-loaded expanded state */}
       {!collapsed && !pricesLoaded && (
         <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic', paddingTop: '0.25rem' }}>
-          Click <strong style={{ color: 'var(--gold)' }}>$ Load Prices</strong> above to fetch current market values for your collection.
+          Use <strong style={{ color: 'var(--gold)' }}>$ Load Prices</strong> in the Cards section above to fetch market values.
         </div>
       )}
 

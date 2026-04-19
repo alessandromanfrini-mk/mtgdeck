@@ -138,9 +138,8 @@ export default function CollectionPage({
             ) : (
               <div style={{ display: 'flex', gap: '0.3rem' }} onClick={e => e.stopPropagation()}>
                 {[
-                  { id: 'tcgplayer',  label: 'TCG' },
-                  { id: 'cardmarket', label: 'CM'  },
-                  { id: 'mtgo',       label: 'MTGO'},
+                  { id: 'tcgplayer',  label: 'TCGPlayer'  },
+                  { id: 'cardmarket', label: 'Cardmarket' },
                 ].map(m => (
                   <button
                     key={m.id}
@@ -188,8 +187,6 @@ export default function CollectionPage({
             cards={collection}
             priceMap={priceMap}
             pricesLoaded={pricesLoaded}
-            pricesLoading={pricesLoading}
-            onLoadPrices={handleLoadPrices}
             marketplace={marketplace}
             onMarketplaceChange={setMarketplace}
           />

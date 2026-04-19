@@ -173,9 +173,6 @@ const CardTile = memo(function CardTile({ card, onRemove, priceMap, marketplace 
           if (marketplace === 'cardmarket') {
             raw    = card.finish === 'foil' || card.finish === 'etched' ? (p.eur_foil ?? p.eur) : p.eur
             symbol = '€'
-          } else if (marketplace === 'mtgo') {
-            raw    = p.tix
-            symbol = ''
           } else {
             raw    = card.finish === 'foil'   ? (p.usd_foil   ?? p.usd)
                    : card.finish === 'etched' ? (p.usd_etched ?? p.usd_foil ?? p.usd)
@@ -184,11 +181,7 @@ const CardTile = memo(function CardTile({ card, onRemove, priceMap, marketplace 
           }
           const val = parseFloat(raw)
           if (!val) return null
-          return (
-            <span className="card-tile-price">
-              {symbol}{val.toFixed(2)}{marketplace === 'mtgo' ? ' tix' : ''}
-            </span>
-          )
+          return <span className="card-tile-price">{symbol}{val.toFixed(2)}</span>
         })()}
       </div>
     </div>

@@ -17,7 +17,6 @@ function getPrice(card, priceMap, marketplace) {
     const raw = card.finish === 'foil' || card.finish === 'etched' ? (p.eur_foil ?? p.eur) : p.eur
     return parseFloat(raw) || 0
   }
-  if (marketplace === 'mtgo') return parseFloat(p.tix) || 0
   const raw = card.finish === 'foil'   ? (p.usd_foil   ?? p.usd)
             : card.finish === 'etched' ? (p.usd_etched ?? p.usd_foil ?? p.usd)
             : p.usd
