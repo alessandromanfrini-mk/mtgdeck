@@ -130,9 +130,8 @@ function fmt(value, marketplace) {
   return `${m.currency}${value.toFixed(2)}`
 }
 
-export default function ValueDashboard({ cards, priceMap, pricesLoaded, pricesLoading, onLoadPrices }) {
-  const [marketplace, setMarketplace] = useState('tcgplayer')
-  const [collapsed,   setCollapsed]   = useState(true)
+export default function ValueDashboard({ cards, priceMap, pricesLoaded, pricesLoading, onLoadPrices, marketplace, onMarketplaceChange }) {
+  const [collapsed, setCollapsed] = useState(true)
 
   const totalValue = useMemo(() => {
     if (!pricesLoaded) return null
@@ -222,7 +221,7 @@ export default function ValueDashboard({ cards, priceMap, pricesLoaded, pricesLo
               <button
                 key={m.id}
                 className={`btn btn-sm${marketplace === m.id ? ' btn-primary' : ''}`}
-                onClick={() => setMarketplace(m.id)}
+                onClick={() => onMarketplaceChange(m.id)}
               >
                 {m.label}
               </button>

@@ -26,7 +26,7 @@ const FOIL_CLASS = {
   'oil-slick':    'foil-shimmer oil-slick',
 }
 
-const CardTile = memo(function CardTile({ card, onRemove, priceMap }) {
+const CardTile = memo(function CardTile({ card, onRemove, priceMap, marketplace }) {
   const [imgErr, setImgErr]       = useState(false)
   const [confirming, setConfirming] = useState(false)
   const tileRef = useRef(null)
@@ -169,12 +169,26 @@ const CardTile = memo(function CardTile({ card, onRemove, priceMap }) {
         {(() => {
           const p = priceMap?.get(card.id) ?? card.prices
           if (!p) return null
-          const raw = card.finish === 'foil'   ? (p.usd_foil   ?? p.usd)
-                    : card.finish === 'etched' ? (p.usd_etched ?? p.usd_foil ?? p.usd)
-                    : p.usd
+          let raw, symbol
+          if (marketplace === 'cardmarket') {
+            raw    = card.finish === 'foil' || card.finish === 'etched' ? (p.eur_foil ?? p.eur) : p.eur
+            symbol = '€'
+          } else if (marketplace === 'mtgo') {
+            raw    = p.tix
+            symbol = ''
+          } else {
+            raw    = card.finish === 'foil'   ? (p.usd_foil   ?? p.usd)
+                   : card.finish === 'etched' ? (p.usd_etched ?? p.usd_foil ?? p.usd)
+                   : p.usd
+            symbol = '$'
+          }
           const val = parseFloat(raw)
           if (!val) return null
-          return <span className="card-tile-price">${val.toFixed(2)}</span>
+          return (
+            <span className="card-tile-price">
+              {symbol}{val.toFixed(2)}{marketplace === 'mtgo' ? ' tix' : ''}
+            </span>
+          )
         })()}
       </div>
     </div>

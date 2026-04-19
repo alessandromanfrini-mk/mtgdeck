@@ -23,6 +23,7 @@ export default function CollectionPage({
   const [priceMap,      setPriceMap]      = useState(new Map())
   const [pricesLoaded,  setPricesLoaded]  = useState(false)
   const [pricesLoading, setPricesLoading] = useState(false)
+  const [marketplace,   setMarketplace]   = useState('tcgplayer')
 
   const handleLoadPrices = useCallback(async () => {
     setPricesLoading(true)
@@ -135,9 +136,22 @@ export default function CollectionPage({
                   : '$ Load Prices'}
               </button>
             ) : (
-              <span style={{ fontSize: '0.68rem', color: 'var(--gold)', fontFamily: "'JetBrains Mono', monospace' " }}>
-                prices loaded
-              </span>
+              <div style={{ display: 'flex', gap: '0.3rem' }} onClick={e => e.stopPropagation()}>
+                {[
+                  { id: 'tcgplayer',  label: 'TCG' },
+                  { id: 'cardmarket', label: 'CM'  },
+                  { id: 'mtgo',       label: 'MTGO'},
+                ].map(m => (
+                  <button
+                    key={m.id}
+                    className={`btn btn-sm${marketplace === m.id ? ' btn-primary' : ''}`}
+                    style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem' }}
+                    onClick={() => setMarketplace(m.id)}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
             )}
 
             <button
@@ -164,7 +178,7 @@ export default function CollectionPage({
                 <button className={`btn btn-sm${view === 'gallery' ? ' btn-primary' : ''}`} onClick={() => setView('gallery')}>Gallery</button>
                 <button className={`btn btn-sm${view === 'binder'  ? ' btn-primary' : ''}`} onClick={() => setView('binder')}>Binder</button>
               </div>
-              {view === 'gallery' && <CardGrid cards={collection} filters={filters} onRemove={onRemoveCard} priceMap={priceMap} />}
+              {view === 'gallery' && <CardGrid cards={collection} filters={filters} onRemove={onRemoveCard} priceMap={priceMap} marketplace={marketplace} />}
               {view === 'binder'  && <div className="panel"><div className="panel-title">Binder View</div><BinderView cards={collection} /></div>}
             </>
           )}
@@ -176,6 +190,8 @@ export default function CollectionPage({
             pricesLoaded={pricesLoaded}
             pricesLoading={pricesLoading}
             onLoadPrices={handleLoadPrices}
+            marketplace={marketplace}
+            onMarketplaceChange={setMarketplace}
           />
 
         </>
