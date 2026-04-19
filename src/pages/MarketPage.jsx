@@ -280,6 +280,7 @@ export default function MarketPage({ collection = [] }) {
   const [selected,  setSelected]  = useState(null)
   const [history,   setHistory]   = useState([])
   const [histLoading, setHistLoading] = useState(false)
+  const [page,      setPage]      = useState(0)
 
   // ── Collection trends state ───────────────────────────────────────────────
   const [colExpanded,  setColExpanded]  = useState(false)
@@ -291,6 +292,7 @@ export default function MarketPage({ collection = [] }) {
   const [colSelected,  setColSelected]  = useState(null)
   const [colHistory,   setColHistory]   = useState([])
   const [colHistLoading, setColHistLoading] = useState(false)
+  const [colPage,      setColPage]      = useState(0)
 
   // Load movers + brief
   useEffect(() => {
@@ -327,11 +329,9 @@ export default function MarketPage({ collection = [] }) {
   useEffect(() => {
     if (collection.length === 0) return
     const ids = [...new Set(collection.map(c => c.id).filter(id => UUID_RE.test(id)))]
-    console.debug('[CollectionTrends] collection cards:', collection.length, '| valid UUIDs:', ids.length, '| sample:', ids.slice(0, 3))
-    if (ids.length === 0) { console.warn('[CollectionTrends] No valid UUIDs in collection'); return }
+    if (ids.length === 0) return
     setColLoading(true)
     getCollectionMovers(ids).then(rows => {
-      console.debug('[CollectionTrends] price_movers rows returned:', rows.length, rows.slice(0, 2))
       // Attach quantity from collection so we can show value impact
       const qtyMap = new Map(collection.map(c => [c.id, (c.quantity ?? 1)]))
       setColMovers(rows.map(r => ({ ...r, quantity: qtyMap.get(r.card_id) ?? 1 })))
@@ -464,21 +464,21 @@ export default function MarketPage({ collection = [] }) {
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: '0.3rem' }}>
               {WINDOWS.map(w => (
-                <button key={w} className={`btn btn-sm${window === w ? ' btn-primary' : ''}`} onClick={() => setWindow(w)}>{w}</button>
+                <button key={w} className={`btn btn-sm${window === w ? ' btn-primary' : ''}`} onClick={() => { setWindow(w); setPage(0) }}>{w}</button>
               ))}
             </div>
             <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 0.25rem' }} />
             <div style={{ display: 'flex', gap: '0.3rem' }}>
               {DIRECTIONS.map(d => (
-                <button key={d} className={`btn btn-sm${direction === d ? ' btn-primary' : ''}`} onClick={() => setDirection(d)}>
+                <button key={d} className={`btn btn-sm${direction === d ? ' btn-primary' : ''}`} onClick={() => { setDirection(d); setPage(0) }}>
                   {d === 'gainers' ? '▲ Gainers' : d === 'losers' ? '▼ Losers' : 'All'}
                 </button>
               ))}
             </div>
             <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 0.25rem' }} />
             <div style={{ display: 'flex', gap: '0.3rem' }}>
-              <button className={`btn btn-sm${sort === 'desc' ? ' btn-primary' : ''}`} onClick={() => setSort('desc')} title="Highest % first">% ▼</button>
-              <button className={`btn btn-sm${sort === 'asc'  ? ' btn-primary' : ''}`} onClick={() => setSort('asc')}  title="Lowest % first">% ▲</button>
+              <button className={`btn btn-sm${sort === 'desc' ? ' btn-primary' : ''}`} onClick={() => { setSort('desc'); setPage(0) }} title="Highest % first">% ▼</button>
+              <button className={`btn btn-sm${sort === 'asc'  ? ' btn-primary' : ''}`} onClick={() => { setSort('asc');  setPage(0) }} title="Lowest % first">% ▲</button>
             </div>
           </div>
 
@@ -492,18 +492,36 @@ export default function MarketPage({ collection = [] }) {
                 : <>No data yet — the daily collection job hasn't run.<br /><span style={{ fontSize: '0.82rem' }}>Trigger the GitHub Actions workflow manually to populate prices.</span></>
               }
             </div>
-          ) : (
-            <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-              {rows.map(card => (
-                <MoverCard
-                  key={card.card_id}
-                  card={card}
-                  selected={selected?.card_id === card.card_id}
-                  onSelect={setSelected}
-                />
-              ))}
-            </div>
-          )}
+          ) : (() => {
+            const PAGE_SIZE  = 25
+            const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+            const safePage   = Math.min(page, totalPages - 1)
+            const pageRows   = rows.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
+            return (
+              <>
+                <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+                  {pageRows.map(card => (
+                    <MoverCard
+                      key={card.card_id}
+                      card={card}
+                      selected={selected?.card_id === card.card_id}
+                      onSelect={setSelected}
+                    />
+                  ))}
+                </div>
+                {totalPages > 1 && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginTop: '0.75rem' }}>
+                    <button className="btn btn-sm" disabled={safePage === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>← Prev</button>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {safePage + 1} / {totalPages}
+                      <span style={{ marginLeft: '0.5rem', opacity: 0.6 }}>({rows.length} cards)</span>
+                    </span>
+                    <button className="btn btn-sm" disabled={safePage >= totalPages - 1} onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}>Next →</button>
+                  </div>
+                )}
+              </>
+            )
+          })()}
         </>
       )}
 
@@ -565,21 +583,21 @@ export default function MarketPage({ collection = [] }) {
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '0.3rem' }}>
                   {WINDOWS.map(w => (
-                    <button key={w} className={`btn btn-sm${colWindow === w ? ' btn-primary' : ''}`} onClick={() => setColWindow(w)}>{w}</button>
+                    <button key={w} className={`btn btn-sm${colWindow === w ? ' btn-primary' : ''}`} onClick={() => { setColWindow(w); setColPage(0) }}>{w}</button>
                   ))}
                 </div>
                 <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 0.25rem' }} />
                 <div style={{ display: 'flex', gap: '0.3rem' }}>
                   {DIRECTIONS.map(d => (
-                    <button key={d} className={`btn btn-sm${colDirection === d ? ' btn-primary' : ''}`} onClick={() => setColDirection(d)}>
+                    <button key={d} className={`btn btn-sm${colDirection === d ? ' btn-primary' : ''}`} onClick={() => { setColDirection(d); setColPage(0) }}>
                       {d === 'gainers' ? '▲ Gainers' : d === 'losers' ? '▼ Losers' : 'All'}
                     </button>
                   ))}
                 </div>
                 <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 0.25rem' }} />
                 <div style={{ display: 'flex', gap: '0.3rem' }}>
-                  <button className={`btn btn-sm${colSort === 'desc' ? ' btn-primary' : ''}`} onClick={() => setColSort('desc')} title="Highest % first">% ▼</button>
-                  <button className={`btn btn-sm${colSort === 'asc'  ? ' btn-primary' : ''}`} onClick={() => setColSort('asc')}  title="Lowest % first">% ▲</button>
+                  <button className={`btn btn-sm${colSort === 'desc' ? ' btn-primary' : ''}`} onClick={() => { setColSort('desc'); setColPage(0) }} title="Highest % first">% ▼</button>
+                  <button className={`btn btn-sm${colSort === 'asc'  ? ' btn-primary' : ''}`} onClick={() => { setColSort('asc');  setColPage(0) }} title="Lowest % first">% ▲</button>
                 </div>
               </div>
 
@@ -610,18 +628,46 @@ export default function MarketPage({ collection = [] }) {
                 const colRows = colDirection === 'gainers' ? sorted.filter(r => r[pf] > 0)
                               : colDirection === 'losers'  ? sorted.filter(r => r[pf] < 0)
                               : sorted
+                const PAGE_SIZE  = 25
+                const totalPages = Math.max(1, Math.ceil(colRows.length / PAGE_SIZE))
+                const safePage   = Math.min(colPage, totalPages - 1)
+                const pageRows   = colRows.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
                 return (
-                  <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-                    {colRows.map(card => (
-                      <MoverCard
-                        key={card.card_id}
-                        card={card}
-                        selected={colSelected?.card_id === card.card_id}
-                        onSelect={c => setColSelected(colSelected?.card_id === card.card_id ? null : c)}
-                        quantity={card.quantity}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+                      {pageRows.map(card => (
+                        <MoverCard
+                          key={card.card_id}
+                          card={card}
+                          selected={colSelected?.card_id === card.card_id}
+                          onSelect={c => setColSelected(colSelected?.card_id === card.card_id ? null : c)}
+                          quantity={card.quantity}
+                        />
+                      ))}
+                    </div>
+                    {totalPages > 1 && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginTop: '0.75rem' }}>
+                        <button
+                          className="btn btn-sm"
+                          disabled={safePage === 0}
+                          onClick={() => setColPage(p => Math.max(0, p - 1))}
+                        >
+                          ← Prev
+                        </button>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                          {safePage + 1} / {totalPages}
+                          <span style={{ marginLeft: '0.5rem', opacity: 0.6 }}>({colRows.length} cards)</span>
+                        </span>
+                        <button
+                          className="btn btn-sm"
+                          disabled={safePage >= totalPages - 1}
+                          onClick={() => setColPage(p => Math.min(totalPages - 1, p + 1))}
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )
               })()}
 

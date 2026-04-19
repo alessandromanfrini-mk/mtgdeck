@@ -17,7 +17,7 @@ export async function getLatestBrief() {
 }
 
 /** Top gaining cards for a given time window (7d / 30d). */
-export async function getTopGainers(window = '7d', limit = 50) {
+export async function getTopGainers(window = '7d', limit = 200) {
   const col = pctCol(window)
   const { data } = await supabase
     .from('price_movers')
@@ -30,7 +30,7 @@ export async function getTopGainers(window = '7d', limit = 50) {
 }
 
 /** Top losing cards for a given time window (7d / 30d). */
-export async function getTopLosers(window = '7d', limit = 50) {
+export async function getTopLosers(window = '7d', limit = 200) {
   const col = pctCol(window)
   const { data } = await supabase
     .from('price_movers')
