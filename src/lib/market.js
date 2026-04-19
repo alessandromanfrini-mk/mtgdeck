@@ -68,11 +68,17 @@ export async function getCardHistory(cardId) {
  */
 export async function getCollectionMovers(scryfallIds) {
   if (!scryfallIds.length) return []
-  const { data } = await supabase
-    .from('price_movers')
-    .select('*')
-    .in('card_id', scryfallIds)
-  return data ?? []
+  const BATCH = 100
+  const results = []
+  for (let i = 0; i < scryfallIds.length; i += BATCH) {
+    const chunk = scryfallIds.slice(i, i + BATCH)
+    const { data } = await supabase
+      .from('price_movers')
+      .select('*')
+      .in('card_id', chunk)
+    if (data) results.push(...data)
+  }
+  return results
 }
 
 function pctCol(window) {
