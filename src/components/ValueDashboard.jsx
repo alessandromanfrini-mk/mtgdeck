@@ -1,5 +1,4 @@
-import React, { useState, useMemo } from 'react'
-import { fetchPrices } from '../lib/scryfall.js'
+import React, { useState, useMemo, useEffect } from 'react'
 
 const FOIL_CLASS = {
   foil:           'foil-shimmer',
@@ -11,9 +10,9 @@ const FOIL_CLASS = {
 }
 
 const RANK_STYLES = [
-  { border: '2px solid #FFD700', glow: '0 0 18px rgba(255,215,0,0.55), 0 8px 32px rgba(0,0,0,0.7)', label: '#FFD700' }, // gold
-  { border: '2px solid #C0C0C0', glow: '0 0 14px rgba(192,192,192,0.45), 0 8px 28px rgba(0,0,0,0.6)', label: '#C0C0C0' }, // silver
-  { border: '2px solid #CD7F32', glow: '0 0 14px rgba(205,127,50,0.45), 0 8px 28px rgba(0,0,0,0.6)', label: '#CD7F32' }, // bronze
+  { border: '2px solid #FFD700', glow: '0 0 18px rgba(255,215,0,0.55), 0 8px 32px rgba(0,0,0,0.7)', label: '#FFD700' },
+  { border: '2px solid #C0C0C0', glow: '0 0 14px rgba(192,192,192,0.45), 0 8px 28px rgba(0,0,0,0.6)', label: '#C0C0C0' },
+  { border: '2px solid #CD7F32', glow: '0 0 14px rgba(205,127,50,0.45), 0 8px 28px rgba(0,0,0,0.6)', label: '#CD7F32' },
 ]
 const DEFAULT_RANK = { border: '1px solid var(--border)', glow: '0 4px 16px rgba(0,0,0,0.5)', label: 'var(--text-muted)' }
 
@@ -44,7 +43,6 @@ function TopCard({ card, rank, price }) {
         cursor: 'default',
       }}
     >
-      {/* Card image */}
       <img
         src={imgErr || !card.imageUrl ? PLACEHOLDER : card.imageUrl}
         alt={card.name}
@@ -52,10 +50,8 @@ function TopCard({ card, rank, price }) {
         style={{ width: '100%', display: 'block' }}
       />
 
-      {/* Foil shimmer — effect varies by finish type */}
       {isFoil && <div className={FOIL_CLASS[card.finish] ?? 'foil-shimmer'} />}
 
-      {/* Rank badge */}
       <div className="top-card-rank" style={{
         position: 'absolute', top: 6, left: 6,
         background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
@@ -66,7 +62,6 @@ function TopCard({ card, rank, price }) {
         #{rank}
       </div>
 
-      {/* Foil indicator */}
       {isFoil && (
         <div className="top-card-foil" style={{
           position: 'absolute', top: 6, right: 6,
@@ -77,7 +72,6 @@ function TopCard({ card, rank, price }) {
         </div>
       )}
 
-      {/* Price footer */}
       <div className="top-card-footer" style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         background: 'linear-gradient(transparent, rgba(0,0,0,0.88))',
@@ -136,46 +130,35 @@ function fmt(value, marketplace) {
   return `${m.currency}${value.toFixed(2)}`
 }
 
-export default function ValueDashboard({ cards }) {
-  const [priceMap, setPriceMap]       = useState(new Map())
-  const [loaded, setLoaded]           = useState(false)
-  const [loading, setLoading]         = useState(false)
+export default function ValueDashboard({ cards, priceMap, pricesLoaded, pricesLoading, onLoadPrices }) {
   const [marketplace, setMarketplace] = useState('tcgplayer')
-  const [collapsed, setCollapsed]     = useState(true)
+  const [collapsed,   setCollapsed]   = useState(true)
 
-  async function handleLoad(e) {
-    e.stopPropagation()
-    setLoading(true)
-    try {
-      const map = await fetchPrices(cards)
-      setPriceMap(map)
-      setLoaded(true)
-      setCollapsed(false)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Auto-expand when prices first become available
+  useEffect(() => {
+    if (pricesLoaded) setCollapsed(false)
+  }, [pricesLoaded])
 
   const totalValue = useMemo(() => {
-    if (!loaded) return null
+    if (!pricesLoaded) return null
     return cards.reduce((sum, c) => sum + cardPrice(c, priceMap, marketplace) * c.quantity, 0)
-  }, [cards, priceMap, loaded, marketplace])
+  }, [cards, priceMap, pricesLoaded, marketplace])
 
   const foilValue = useMemo(() => {
-    if (!loaded) return null
+    if (!pricesLoaded) return null
     return cards
       .filter(c => c.finish !== 'nonFoil')
       .reduce((sum, c) => sum + cardPrice(c, priceMap, marketplace) * c.quantity, 0)
-  }, [cards, priceMap, loaded, marketplace])
+  }, [cards, priceMap, pricesLoaded, marketplace])
 
   const topCards = useMemo(() => {
-    if (!loaded) return []
+    if (!pricesLoaded) return []
     return [...cards]
       .map(c => ({ ...c, _price: cardPrice(c, priceMap, marketplace) }))
       .filter(c => c._price > 0)
       .sort((a, b) => b._price - a._price)
       .slice(0, 10)
-  }, [cards, priceMap, loaded, marketplace])
+  }, [cards, priceMap, pricesLoaded, marketplace])
 
   if (cards.length === 0) return null
 
@@ -200,7 +183,7 @@ export default function ValueDashboard({ cards }) {
         </span>
 
         {/* Total value badge — visible while collapsed */}
-        {loaded && totalValue != null && (
+        {pricesLoaded && totalValue != null && (
           <span style={{
             fontSize: '0.82rem', fontFamily: "'JetBrains Mono', monospace",
             color: 'var(--gold)', fontWeight: 700,
@@ -209,15 +192,17 @@ export default function ValueDashboard({ cards }) {
           </span>
         )}
 
-        {/* Inline load button — accessible without expanding */}
-        {!loaded && (
+        {/* Load button — shown when prices not yet loaded */}
+        {!pricesLoaded && (
           <button
             className="btn btn-sm btn-primary"
-            onClick={handleLoad}
-            disabled={loading}
-            style={{ opacity: loading ? 0.6 : 1, fontSize: '0.72rem', padding: '0.2rem 0.6rem' }}
+            onClick={e => { e.stopPropagation(); onLoadPrices() }}
+            disabled={pricesLoading}
+            style={{ opacity: pricesLoading ? 0.6 : 1, fontSize: '0.72rem', padding: '0.2rem 0.6rem' }}
           >
-            {loading ? <><span className="spinner" style={{ width: 12, height: 12, display: 'inline-block', marginRight: '0.3rem', verticalAlign: 'middle' }} />Loading…</> : '$ Load Prices'}
+            {pricesLoading
+              ? <><span className="spinner" style={{ width: 12, height: 12, display: 'inline-block', marginRight: '0.3rem', verticalAlign: 'middle' }} />Loading…</>
+              : '$ Load Prices'}
           </button>
         )}
 
@@ -232,7 +217,7 @@ export default function ValueDashboard({ cards }) {
       </button>
 
       {/* ── Expanded body ── */}
-      {!collapsed && loaded && (
+      {!collapsed && pricesLoaded && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
           {/* Marketplace selector */}
@@ -279,8 +264,8 @@ export default function ValueDashboard({ cards }) {
         </div>
       )}
 
-      {/* Not-yet-loaded expanded state — just a hint */}
-      {!collapsed && !loaded && (
+      {/* Not-yet-loaded expanded state */}
+      {!collapsed && !pricesLoaded && (
         <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic', paddingTop: '0.25rem' }}>
           Click <strong style={{ color: 'var(--gold)' }}>$ Load Prices</strong> above to fetch current market values for your collection.
         </div>

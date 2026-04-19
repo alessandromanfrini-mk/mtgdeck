@@ -26,7 +26,7 @@ const FOIL_CLASS = {
   'oil-slick':    'foil-shimmer oil-slick',
 }
 
-const CardTile = memo(function CardTile({ card, onRemove }) {
+const CardTile = memo(function CardTile({ card, onRemove, priceMap }) {
   const [imgErr, setImgErr]       = useState(false)
   const [confirming, setConfirming] = useState(false)
   const tileRef = useRef(null)
@@ -167,7 +167,7 @@ const CardTile = memo(function CardTile({ card, onRemove }) {
           {card.cmc > 0 && <span className="card-tile-cmc">{card.cmc}</span>}
         </div>
         {(() => {
-          const p = card.prices
+          const p = priceMap?.get(card.id) ?? card.prices
           if (!p) return null
           const raw = card.finish === 'foil'   ? (p.usd_foil   ?? p.usd)
                     : card.finish === 'etched' ? (p.usd_etched ?? p.usd_foil ?? p.usd)

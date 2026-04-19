@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import CardSearch from '../components/CardSearch.jsx'
 import ImportPanel from '../components/ImportPanel.jsx'
 import FilterBar from '../components/FilterBar.jsx'
 import CardGrid from '../components/CardGrid.jsx'
 import BinderView from '../components/BinderView.jsx'
 import ValueDashboard from '../components/ValueDashboard.jsx'
+import { fetchPrices } from '../lib/scryfall.js'
 
 const DEFAULT_FILTERS = { search: '', colors: [], types: [], foil: false, sort: 'name' }
 
@@ -12,11 +13,27 @@ export default function CollectionPage({
   collection, colLoading, colError,
   onAddCard, onRemoveCard, onClearCollection, onImport,
 }) {
-  const [filters, setFilters]       = useState(DEFAULT_FILTERS)
-  const [view, setView]             = useState('gallery')
-  const [drawerOpen, setDrawer]     = useState(false)
-  const [addTab, setAddTab]         = useState('single')
+  const [filters, setFilters]           = useState(DEFAULT_FILTERS)
+  const [view, setView]                 = useState('gallery')
+  const [drawerOpen, setDrawer]         = useState(false)
+  const [addTab, setAddTab]             = useState('single')
   const [cardsExpanded, setCardsExpanded] = useState(false)
+
+  // ── Shared price state ───────────────────────────────────────────────────────
+  const [priceMap,      setPriceMap]      = useState(new Map())
+  const [pricesLoaded,  setPricesLoaded]  = useState(false)
+  const [pricesLoading, setPricesLoading] = useState(false)
+
+  const handleLoadPrices = useCallback(async () => {
+    setPricesLoading(true)
+    try {
+      const map = await fetchPrices(collection)
+      setPriceMap(map)
+      setPricesLoaded(true)
+    } finally {
+      setPricesLoading(false)
+    }
+  }, [collection])
 
   const total = useMemo(() => collection.reduce((s, c) => s + c.quantity, 0), [collection])
 
@@ -104,6 +121,25 @@ export default function CollectionPage({
             <span style={{ fontSize: '0.70rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace" }}>
               {collection.length} unique · {total} total
             </span>
+
+            {/* Load Prices button — inline, stops propagation to avoid toggling expand */}
+            {!pricesLoaded ? (
+              <button
+                className="btn btn-sm btn-primary"
+                disabled={pricesLoading}
+                style={{ fontSize: '0.68rem', padding: '0.18rem 0.55rem', opacity: pricesLoading ? 0.6 : 1 }}
+                onClick={e => { e.stopPropagation(); handleLoadPrices() }}
+              >
+                {pricesLoading
+                  ? <><span className="spinner" style={{ width: 10, height: 10, display: 'inline-block', marginRight: '0.3rem', verticalAlign: 'middle' }} />Loading…</>
+                  : '$ Load Prices'}
+              </button>
+            ) : (
+              <span style={{ fontSize: '0.68rem', color: 'var(--gold)', fontFamily: "'JetBrains Mono', monospace' " }}>
+                prices loaded
+              </span>
+            )}
+
             <button
               className="btn btn-sm btn-danger"
               style={{ marginLeft: 'auto', fontSize: '0.68rem', padding: '0.18rem 0.55rem' }}
@@ -128,13 +164,19 @@ export default function CollectionPage({
                 <button className={`btn btn-sm${view === 'gallery' ? ' btn-primary' : ''}`} onClick={() => setView('gallery')}>Gallery</button>
                 <button className={`btn btn-sm${view === 'binder'  ? ' btn-primary' : ''}`} onClick={() => setView('binder')}>Binder</button>
               </div>
-              {view === 'gallery' && <CardGrid cards={collection} filters={filters} onRemove={onRemoveCard} />}
+              {view === 'gallery' && <CardGrid cards={collection} filters={filters} onRemove={onRemoveCard} priceMap={priceMap} />}
               {view === 'binder'  && <div className="panel"><div className="panel-title">Binder View</div><BinderView cards={collection} /></div>}
             </>
           )}
 
           <div className="section-divider"><span>✦</span></div>
-          <ValueDashboard cards={collection} />
+          <ValueDashboard
+            cards={collection}
+            priceMap={priceMap}
+            pricesLoaded={pricesLoaded}
+            pricesLoading={pricesLoading}
+            onLoadPrices={handleLoadPrices}
+          />
 
         </>
       )}

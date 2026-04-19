@@ -53,7 +53,7 @@ function filterCards(cards, filters) {
 
 const PAGE_SIZE = 48
 
-export default function CardGrid({ cards, filters, onRemove }) {
+export default function CardGrid({ cards, filters, onRemove, priceMap }) {
   const [page, setPage] = useState(1)
 
   const visible = useMemo(
@@ -87,7 +87,7 @@ export default function CardGrid({ cards, filters, onRemove }) {
     <>
       <div className="card-grid">
         {shown.map(card => (
-          <CardTile key={card._srcKey ?? (card.id + ':' + (card.finish ?? 'nonFoil'))} card={card} onRemove={onRemove} />
+          <CardTile key={card._srcKey ?? (card.id + ':' + (card.finish ?? 'nonFoil'))} card={card} onRemove={onRemove} priceMap={priceMap} />
         ))}
       </div>
       {remaining > 0 && (
