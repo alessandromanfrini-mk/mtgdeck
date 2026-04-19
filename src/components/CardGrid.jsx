@@ -10,25 +10,21 @@ function getMainType(typeLine) {
 
 const RARITY_ORDER = { mythic: 0, rare: 1, uncommon: 2, common: 3, '': 4 }
 
-function getPrice(card, priceMap, marketplace) {
+function getPrice(card, priceMap) {
   const p = priceMap?.get(card.id) ?? card.prices
   if (!p) return 0
-  if (marketplace === 'cardmarket') {
-    const raw = card.finish === 'foil' || card.finish === 'etched' ? (p.eur_foil ?? p.eur) : p.eur
-    return parseFloat(raw) || 0
-  }
   const raw = card.finish === 'foil'   ? (p.usd_foil   ?? p.usd)
             : card.finish === 'etched' ? (p.usd_etched ?? p.usd_foil ?? p.usd)
             : p.usd
   return parseFloat(raw) || 0
 }
 
-function sortCards(cards, sort, priceMap, marketplace) {
+function sortCards(cards, sort, priceMap) {
   return [...cards].sort((a, b) => {
     switch (sort) {
       case 'name':        return a.name.localeCompare(b.name)
-      case 'price_desc':  return getPrice(b, priceMap, marketplace) - getPrice(a, priceMap, marketplace) || a.name.localeCompare(b.name)
-      case 'price_asc':   return getPrice(a, priceMap, marketplace) - getPrice(b, priceMap, marketplace) || a.name.localeCompare(b.name)
+      case 'price_desc':  return getPrice(b, priceMap) - getPrice(a, priceMap) || a.name.localeCompare(b.name)
+      case 'price_asc':   return getPrice(a, priceMap) - getPrice(b, priceMap) || a.name.localeCompare(b.name)
       case 'cmc_asc':     return a.cmc - b.cmc || a.name.localeCompare(b.name)
       case 'cmc_desc':    return b.cmc - a.cmc || a.name.localeCompare(b.name)
       case 'qty_desc':    return b.quantity - a.quantity || a.name.localeCompare(b.name)
@@ -68,12 +64,12 @@ function filterCards(cards, filters) {
 
 const PAGE_SIZE = 48
 
-export default function CardGrid({ cards, filters, onRemove, priceMap, marketplace }) {
+export default function CardGrid({ cards, filters, onRemove, priceMap }) {
   const [page, setPage] = useState(1)
 
   const visible = useMemo(
-    () => sortCards(filterCards(cards, filters), filters.sort, priceMap, marketplace),
-    [cards, filters, priceMap, marketplace],
+    () => sortCards(filterCards(cards, filters), filters.sort, priceMap),
+    [cards, filters, priceMap],
   )
 
   // Reset to page 1 whenever the filtered+sorted list changes
@@ -102,7 +98,7 @@ export default function CardGrid({ cards, filters, onRemove, priceMap, marketpla
     <>
       <div className="card-grid">
         {shown.map(card => (
-          <CardTile key={card._srcKey ?? (card.id + ':' + (card.finish ?? 'nonFoil'))} card={card} onRemove={onRemove} priceMap={priceMap} marketplace={marketplace} />
+          <CardTile key={card._srcKey ?? (card.id + ':' + (card.finish ?? 'nonFoil'))} card={card} onRemove={onRemove} priceMap={priceMap} />
         ))}
       </div>
       {remaining > 0 && (

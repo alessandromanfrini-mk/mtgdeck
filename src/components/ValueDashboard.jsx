@@ -98,55 +98,41 @@ function TopCard({ card, rank, price }) {
   )
 }
 
-const MARKETPLACES = [
-  { id: 'tcgplayer',  label: 'TCGPlayer',  currency: '$' },
-  { id: 'cardmarket', label: 'Cardmarket', currency: '€' },
-]
-
-function cardPrice(card, priceMap, marketplace) {
+function cardPrice(card, priceMap) {
   const p = priceMap.get(card.id)
   if (!p) return 0
-
-  if (marketplace === 'cardmarket') {
-    if (card.finish === 'foil' || card.finish === 'etched')
-      return parseFloat(p.eur_foil ?? p.eur ?? '0') || 0
-    return parseFloat(p.eur ?? '0') || 0
-  }
-
-  // TCGPlayer (default)
   if (card.finish === 'foil')   return parseFloat(p.usd_foil   ?? p.usd ?? '0') || 0
   if (card.finish === 'etched') return parseFloat(p.usd_etched ?? p.usd_foil ?? p.usd ?? '0') || 0
   return parseFloat(p.usd ?? '0') || 0
 }
 
-function fmt(value, marketplace) {
-  const currency = MARKETPLACES.find(x => x.id === marketplace)?.currency ?? '$'
-  return `${currency}${value.toFixed(2)}`
+function fmt(value) {
+  return `$${value.toFixed(2)}`
 }
 
-export default function ValueDashboard({ cards, priceMap, pricesLoaded, marketplace, onMarketplaceChange }) {
+export default function ValueDashboard({ cards, priceMap, pricesLoaded }) {
   const [collapsed, setCollapsed] = useState(true)
 
   const totalValue = useMemo(() => {
     if (!pricesLoaded) return null
-    return cards.reduce((sum, c) => sum + cardPrice(c, priceMap, marketplace) * c.quantity, 0)
-  }, [cards, priceMap, pricesLoaded, marketplace])
+    return cards.reduce((sum, c) => sum + cardPrice(c, priceMap) * c.quantity, 0)
+  }, [cards, priceMap, pricesLoaded])
 
   const foilValue = useMemo(() => {
     if (!pricesLoaded) return null
     return cards
       .filter(c => c.finish !== 'nonFoil')
-      .reduce((sum, c) => sum + cardPrice(c, priceMap, marketplace) * c.quantity, 0)
-  }, [cards, priceMap, pricesLoaded, marketplace])
+      .reduce((sum, c) => sum + cardPrice(c, priceMap) * c.quantity, 0)
+  }, [cards, priceMap, pricesLoaded])
 
   const topCards = useMemo(() => {
     if (!pricesLoaded) return []
     return [...cards]
-      .map(c => ({ ...c, _price: cardPrice(c, priceMap, marketplace) }))
+      .map(c => ({ ...c, _price: cardPrice(c, priceMap) }))
       .filter(c => c._price > 0)
       .sort((a, b) => b._price - a._price)
       .slice(0, 10)
-  }, [cards, priceMap, pricesLoaded, marketplace])
+  }, [cards, priceMap, pricesLoaded])
 
   if (cards.length === 0) return null
 
@@ -170,13 +156,12 @@ export default function ValueDashboard({ cards, priceMap, pricesLoaded, marketpl
           Collection Value
         </span>
 
-        {/* Total value badge — only visible when expanded */}
         {pricesLoaded && !collapsed && totalValue != null && (
           <span style={{
             fontSize: '0.82rem', fontFamily: "'JetBrains Mono', monospace",
             color: 'var(--gold)', fontWeight: 700,
           }}>
-            {fmt(totalValue, marketplace)}
+            {fmt(totalValue)}
           </span>
         )}
 
@@ -194,26 +179,12 @@ export default function ValueDashboard({ cards, priceMap, pricesLoaded, marketpl
       {!collapsed && pricesLoaded && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-          {/* Marketplace selector */}
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginRight: '0.25rem' }}>Prices from</span>
-            {MARKETPLACES.map(m => (
-              <button
-                key={m.id}
-                className={`btn btn-sm${marketplace === m.id ? ' btn-primary' : ''}`}
-                onClick={() => onMarketplaceChange(m.id)}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-
           {/* Summary row */}
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
             {[
-              { label: 'Total Value',  value: fmt(totalValue, marketplace) },
-              { label: 'Foil Value',   value: fmt(foilValue, marketplace) },
-              { label: 'Non-Foil',     value: fmt(totalValue - foilValue, marketplace) },
+              { label: 'Total Value',  value: fmt(totalValue) },
+              { label: 'Foil Value',   value: fmt(foilValue) },
+              { label: 'Non-Foil',     value: fmt(totalValue - foilValue) },
               { label: 'Unique Cards', value: cards.length },
             ].map(({ label, value }) => (
               <div key={label} style={{ background: 'var(--surface2)', borderRadius: 8, padding: '0.75rem 1.25rem', flex: '1 1 120px' }}>
@@ -229,7 +200,7 @@ export default function ValueDashboard({ cards, priceMap, pricesLoaded, marketpl
               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Most Valuable Cards</div>
               <div className="top-cards-grid">
                 {topCards.map((c, i) => (
-                  <TopCard key={c.id + ':' + c.finish} card={c} rank={i + 1} price={fmt(c._price, marketplace)} />
+                  <TopCard key={c.id + ':' + c.finish} card={c} rank={i + 1} price={fmt(c._price)} />
                 ))}
               </div>
             </div>

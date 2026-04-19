@@ -13,17 +13,16 @@ export default function CollectionPage({
   collection, colLoading, colError,
   onAddCard, onRemoveCard, onClearCollection, onImport,
 }) {
-  const [filters, setFilters]           = useState(DEFAULT_FILTERS)
-  const [view, setView]                 = useState('gallery')
-  const [drawerOpen, setDrawer]         = useState(false)
-  const [addTab, setAddTab]             = useState('single')
+  const [filters, setFilters]             = useState(DEFAULT_FILTERS)
+  const [view, setView]                   = useState('gallery')
+  const [drawerOpen, setDrawer]           = useState(false)
+  const [addTab, setAddTab]               = useState('single')
   const [cardsExpanded, setCardsExpanded] = useState(false)
 
   // ── Shared price state ───────────────────────────────────────────────────────
   const [priceMap,      setPriceMap]      = useState(new Map())
   const [pricesLoaded,  setPricesLoaded]  = useState(false)
   const [pricesLoading, setPricesLoading] = useState(false)
-  const [marketplace,   setMarketplace]   = useState('tcgplayer')
 
   const handleLoadPrices = useCallback(async () => {
     setPricesLoading(true)
@@ -123,7 +122,6 @@ export default function CollectionPage({
               {collection.length} unique · {total} total
             </span>
 
-            {/* Load Prices button — inline, stops propagation to avoid toggling expand */}
             {!pricesLoaded ? (
               <button
                 className="btn btn-sm btn-primary"
@@ -136,21 +134,9 @@ export default function CollectionPage({
                   : '$ Load Prices'}
               </button>
             ) : (
-              <div style={{ display: 'flex', gap: '0.3rem' }} onClick={e => e.stopPropagation()}>
-                {[
-                  { id: 'tcgplayer',  label: 'TCGPlayer'  },
-                  { id: 'cardmarket', label: 'Cardmarket' },
-                ].map(m => (
-                  <button
-                    key={m.id}
-                    className={`btn btn-sm${marketplace === m.id ? ' btn-primary' : ''}`}
-                    style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem' }}
-                    onClick={() => setMarketplace(m.id)}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
+              <span style={{ fontSize: '0.68rem', color: 'var(--gold)', fontFamily: "'JetBrains Mono', monospace" }}>
+                TCGPlayer prices loaded
+              </span>
             )}
 
             <button
@@ -177,7 +163,7 @@ export default function CollectionPage({
                 <button className={`btn btn-sm${view === 'gallery' ? ' btn-primary' : ''}`} onClick={() => setView('gallery')}>Gallery</button>
                 <button className={`btn btn-sm${view === 'binder'  ? ' btn-primary' : ''}`} onClick={() => setView('binder')}>Binder</button>
               </div>
-              {view === 'gallery' && <CardGrid cards={collection} filters={filters} onRemove={onRemoveCard} priceMap={priceMap} marketplace={marketplace} />}
+              {view === 'gallery' && <CardGrid cards={collection} filters={filters} onRemove={onRemoveCard} priceMap={priceMap} />}
               {view === 'binder'  && <div className="panel"><div className="panel-title">Binder View</div><BinderView cards={collection} /></div>}
             </>
           )}
@@ -187,8 +173,6 @@ export default function CollectionPage({
             cards={collection}
             priceMap={priceMap}
             pricesLoaded={pricesLoaded}
-            marketplace={marketplace}
-            onMarketplaceChange={setMarketplace}
           />
 
         </>
