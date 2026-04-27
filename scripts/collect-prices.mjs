@@ -22,8 +22,8 @@ const SF_COLL_URL = 'https://api.scryfall.com/cards/collection'
 async function fetchBulkCards() {
   console.log('[1/7] Fetching Scryfall bulk data index…')
   const index = await fetch('https://api.scryfall.com/bulk-data').then(r => r.json())
-  const entry = index.data.find(d => d.type === 'default_cards')
-  if (!entry) throw new Error('Could not find default_cards bulk entry')
+  const entry = index.data.find(d => d.type === 'oracle_cards')
+  if (!entry) throw new Error('Could not find oracle_cards bulk entry')
 
   console.log(`      Downloading ${entry.name} (~${Math.round(entry.size / 1e6)} MB)…`)
   const raw = await fetch(entry.download_uri).then(r => r.json())
